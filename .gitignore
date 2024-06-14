@@ -9,6 +9,12 @@
 # User-specific files
 .Ruserdata
 
+# MacOS stuff
+.DS_Store
+
+# targets metadata
+/_targets/
+
 # Example code in package build process
 *-Ex.R
 
