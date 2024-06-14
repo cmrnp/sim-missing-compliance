@@ -9,6 +9,7 @@ library(estimatr)
 library(broom)
 library(mice)
 library(withr)
+library(sandwich)
 
 source("R/data-generation.R")
 source("R/estimators.R")
@@ -50,7 +51,8 @@ list(
     command = 
       run_scenario(filter(scenario_params, scenario_name == name)),
     values = scenario_list %>%
-      filter(outcome_missingness == "no", sample_size == "small") %>%
+      filter(outcome_missingness == "no", sample_size == "small",
+             missingness_mechanism %in% c("none", "mar_strong")) %>%
       select(name = scenario_name),
     names = any_of("name"),
     batches = 20,
