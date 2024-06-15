@@ -10,6 +10,7 @@ library(broom)
 library(mice)
 library(withr)
 library(sandwich)
+library(cowplot)
 
 source("R/data-generation.R")
 source("R/estimators.R")
@@ -59,5 +60,20 @@ list(
     reps = 100,
     combine = TRUE,
   ),
-  tar_target(sim_reps_summary, summarise_sim_reps(sim_reps))
+  tar_target(sim_reps_summary, summarise_sim_reps(sim_reps)),
+  tar_target(
+    save_results_no_missing, 
+    plot_results_no_missing(sim_reps_summary), 
+    format = "file"
+  ),
+  tar_target(
+    save_results_null, 
+    plot_results_null(sim_reps_summary), 
+    format = "file"
+  ),
+  tar_target(
+    save_results_main, 
+    plot_results_main(sim_reps_summary), 
+    format = "file"
+  )
 )
