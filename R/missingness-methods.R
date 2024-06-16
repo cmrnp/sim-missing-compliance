@@ -38,8 +38,10 @@ missingness_mi_binary <- function(dat, estimators, m = 50, iter = 10) {
   dat_ctrl <- filter(dat_for_imp, trt == 0)
   dat_trt <- filter(dat_for_imp, trt == 1)
   
-  imp_ctrl <- mice(dat_ctrl, m = m, maxit = iter, printFlag = FALSE)
-  imp_trt <- mice(dat_trt, m = m, maxit = iter, printFlag = FALSE)
+  imp_ctrl <- 
+    suppressWarnings(mice(dat_ctrl, m = m, maxit = iter, printFlag = FALSE))
+  imp_trt <- 
+    suppressWarnings(mice(dat_trt, m = m, maxit = iter, printFlag = FALSE))
   imp_all <- rbind(imp_trt, imp_ctrl)
   imp_all_df <- complete(imp_all, action = "long", include = FALSE) %>%
     mutate(dose_binary = as.numeric(as.character(dose_binary)))
@@ -55,8 +57,10 @@ missingness_mi_continuous <- function(dat, estimators, m = 50, iter = 10) {
   dat_ctrl <- filter(dat_for_imp, trt == 0)
   dat_trt <- filter(dat_for_imp, trt == 1)
   
-  imp_ctrl <- mice(dat_ctrl, m = m, maxit = iter, printFlag = FALSE)
-  imp_trt <- mice(dat_trt, m = m, maxit = iter, printFlag = FALSE)
+  imp_ctrl <- 
+    suppressWarnings(mice(dat_ctrl, m = m, maxit = iter, printFlag = FALSE))
+  imp_trt <- 
+    suppressWarnings(mice(dat_trt, m = m, maxit = iter, printFlag = FALSE))
   imp_all <- rbind(imp_trt, imp_ctrl)
   imp_all_df <- complete(imp_all, action = "long", include = FALSE) %>%
    mutate(dose_binary = as.numeric(dose >= compliance_threshold))
@@ -79,16 +83,14 @@ missingness_ipw <- function(dat, estimators) {
     family = binomial,
     data = dat
   )
-  probs_out <- predict(weights_model, type = "response", newdata = dat)
-  weights_out <- if_else(
-    dat$complete_case, 
-    1 / probs_out, 
-    1 / (1 - probs_out)
-  )
+
+  dat_cc <- drop_na(dat, outcome, dose_binary)
+  probs_out <- predict(weights_model, type = "response", newdata = dat_cc)
+  weights_out <- 1 / probs_out
 
   estimators %>%
     rowwise(estimator_name) %>%
-    reframe(estimator_fn(dat, weights = weights_out))
+    reframe(estimator_fn(dat_cc, weights = weights_out))
 }
 
 missingness_methods <- tribble(

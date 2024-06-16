@@ -20,8 +20,6 @@ estimator_naive <- function(dat, weights = NULL) {
 
 # standardisation estimate
 estimator_standardisation <- function(dat, weights = NULL) {
-  dat$weights <- weights
-  dat <- drop_na(dat, dose_binary, outcome, confounder)
   if (is.null(weights)) {
     m <- lm(
       outcome ~ dose_binary + confounder + dose_binary*confounder,
@@ -32,10 +30,10 @@ estimator_standardisation <- function(dat, weights = NULL) {
   } else {
     m <- lm(
       outcome ~ dose_binary + confounder + dose_binary*confounder,
-      weights = dat$weights, data = dat
+      weights = weights, data = dat
     )
     vcov_type <- "HC2"
-    wts <- dat$weights
+    wts <- weights
   }
   df = get_df(m)
   avg_comparisons(
@@ -49,8 +47,6 @@ estimator_standardisation <- function(dat, weights = NULL) {
 
 # IPTW estimate
 estimator_iptw <- function(dat, weights = NULL) {
-  dat$weights <- weights
-  dat <- drop_na(dat, dose_binary, outcome, confounder)
   weights_model <- glm(
     dose_binary ~ trt*confounder,
     family = binomial,
@@ -64,7 +60,7 @@ estimator_iptw <- function(dat, weights = NULL) {
   )
   if (!is.null(weights)) {
     # XXX is this legit?
-    weights_out <- weights_out * dat$weights
+    weights_out <- weights_out * weights
   }
   m <- lm_robust(
     outcome ~ dose_binary,
