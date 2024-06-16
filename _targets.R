@@ -56,7 +56,7 @@ list(
              missingness_mechanism %in% c("none", "mar_strong")) %>%
       select(name = scenario_name),
     names = any_of("name"),
-    batches = 20,
+    batches = 4,
     reps = 100,
     combine = TRUE,
   ),

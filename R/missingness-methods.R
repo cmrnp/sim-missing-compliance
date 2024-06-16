@@ -23,7 +23,7 @@ run_estimator_mi <- function(imp_all_df, estimator) {
   )
 }
 
-missingness_mi_binary <- function(dat, estimators, m = 100, iter = 10) {
+missingness_mi_binary <- function(dat, estimators, m = 50, iter = 10) {
   dat_for_imp <- dat %>%
     select(trt, aux, confounder, dose_binary, outcome) %>%
     mutate(dose_binary = as.factor(dose_binary))
@@ -49,7 +49,7 @@ missingness_mi_binary <- function(dat, estimators, m = 100, iter = 10) {
     reframe(run_estimator_mi(imp_all_df, estimator_fn))
 }
 
-missingness_mi_continuous <- function(dat, estimators, m = 100, iter = 10) {
+missingness_mi_continuous <- function(dat, estimators, m = 50, iter = 10) {
   dat_for_imp <- dat %>%
     select(trt, aux, confounder, dose, outcome, compliance_threshold)
   dat_ctrl <- filter(dat_for_imp, trt == 0)
