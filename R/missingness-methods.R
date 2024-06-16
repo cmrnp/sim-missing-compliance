@@ -75,7 +75,7 @@ missingness_ipw <- function(dat, estimators) {
   dat <- dat %>%
     mutate(complete_case = !is.na(dose))
   weights_model <- glm(
-    complete_case ~ aux + outcome,
+    complete_case ~ trt*aux + trt*outcome,
     family = binomial,
     data = dat
   )
