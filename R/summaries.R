@@ -85,10 +85,10 @@ plot_results_no_missing <- function(sim_reps_summary) {
   ggsave("plots/no_missing.png", width = 7, height = 9, dpi = 300)
 }
 
-plot_results_null <- function(sim_reps_summary) {
+plot_results_null <- function(sim_reps_summary, outcome_missingness_, sample_size_) {
   dat <- sim_reps_summary %>%
     filter(treatment_effect == "null", missingness_mechanism != "none",
-           outcome_missingness == "no", sample_size == "small")
+           outcome_missingness == outcome_missingness_, sample_size == sample_size_)
   plot_grid(
     ggplot(dat, aes(y = missingness_name, x = bias,
                     xmin = bias - 1.96*bias_se, xmax = bias + 1.96*bias_se,
@@ -128,63 +128,79 @@ plot_results_null <- function(sim_reps_summary) {
       theme_cp(grid = "x"),
     ncol = 1
   )
-  ggsave("plots/null.png", width = 7, height = 5, dpi = 300)
+  ggsave(glue("plots/null_{sample_size_}_{outcome_missingness_}.png"), width = 7, height = 5, dpi = 300)
 }
 
-plot_results_main <- function(sim_reps_summary) {
+plot_results_main <- function(
+    sim_reps_summary, outcome_missingness_, sample_size_
+) {
   dat <- sim_reps_summary %>%
     filter(treatment_effect != "null", missingness_mechanism != "none",
-           outcome_missingness == "no", sample_size == "small")
+           estimator_name != "naive",
+           outcome_missingness == outcome_missingness_,
+           sample_size == sample_size_) %>%
+    mutate(
+      missingness_name = 
+        fct_relabel(missingness_name, \(x) str_replace_all(x, "_", " ")),
+      treatment_effect = 
+        fct_relabel(treatment_effect, \(x) str_replace_all(x, "_", " ")),
+      treatment_effect = 
+        fct_relabel(treatment_effect, \(x) str_replace_all(x, "compliance", "compl")),
+      missingness_mechanism = 
+        fct_relabel(missingness_mechanism, \(x) str_replace_all(x, "_", " ")),
+    )
   ggplot(dat, aes(y = missingness_name, x = rel_bias,
-                  xmin = rel_bias - 1.96*rel_bias_se, 
-                  xmax = rel_bias + 1.96*rel_bias_se,
                   colour = estimator_name, shape = estimator_name)) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
-    geom_pointrange(position = position_dodge(0.5)) +
+    geom_point(size = 2.5) +
     scale_y_discrete(limits = rev) +
-    facet_wrap(vars(treatment_effect, missingness_mechanism)) +
+    facet_grid(cols = vars(treatment_effect),
+               rows = vars(missingness_mechanism)) +
     labs(x = "Relative bias", y = NULL,
          colour = "estimator", shape = "estimator") +
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p1 <- ggsave("plots/main_bias.png", width = 6, height = 3, dpi = 300)
+  p1 <- ggsave(glue("plots/main_bias_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
   ggplot(dat, aes(y = missingness_name, x = rel_rmse,
                   colour = estimator_name, shape = estimator_name)) +
     expand_limits(x = 0) +
     geom_point(position = position_dodge(0.5), size = 2.5) +
     scale_y_discrete(limits = rev) +
-    facet_wrap(vars(treatment_effect, missingness_mechanism)) +
+    facet_grid(cols = vars(treatment_effect),
+               rows = vars(missingness_mechanism)) +
     labs(x = "Relative root-mean-square error", y = NULL,
          colour = "estimator", shape = "estimator") +
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p2 <- ggsave("plots/main_rmse.png", width = 6, height = 3, dpi = 300)
+  p2 <- ggsave(glue("plots/main_rmse_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
   ggplot(dat, aes(y = missingness_name, x = rel_se_empirical,
                   colour = estimator_name, shape = estimator_name)) +
     expand_limits(x = 0) +
     geom_point(position = position_dodge(0.25), size = 2.5) +
     scale_y_discrete(limits = rev) +
-    facet_wrap(vars(treatment_effect, missingness_mechanism)) +
+    facet_grid(cols = vars(treatment_effect),
+               rows = vars(missingness_mechanism)) +
     labs(x = "Relative standard error (empirical)", y = NULL,
          colour = "estimator", shape = "estimator") +
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p3 <- ggsave("plots/main_se_empirical.png", width = 6, height = 3, dpi = 300)
+  p3 <- ggsave(glue("plots/main_se_empirical_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
   ggplot(dat, aes(y = missingness_name, x = ci_coverage,
                   colour = estimator_name, shape = estimator_name)) +
     expand_limits(x = 1) +
     geom_vline(xintercept = 0.95, linetype = "dashed", colour = "grey60") +
     geom_point(position = position_dodge(0.25), size = 2.5) +
     scale_y_discrete(limits = rev) +
-    facet_wrap(vars(treatment_effect, missingness_mechanism)) +
+    facet_grid(cols = vars(treatment_effect),
+               rows = vars(missingness_mechanism)) +
     labs(x = "Coverage of 95% confidence intervals", y = NULL,
          colour = "estimator", shape = "estimator") +
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p4 <- ggsave("plots/main_ci_coverage.png", width = 6, height = 3, dpi = 300)
+  p4 <- ggsave(glue("plots/main_ci_coverage_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
   c(p1, p2, p3, p4)
 }

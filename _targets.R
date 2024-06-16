@@ -53,8 +53,8 @@ list(
     command = 
       run_scenario(filter(scenario_params, scenario_name == name)),
     values = scenario_list %>%
-#      filter(outcome_missingness == "no", sample_size == "small",
-#             missingness_mechanism %in% c("none", "mar_strong")) %>%
+      #      filter(outcome_missingness == "no", sample_size == "small",
+      #             missingness_mechanism %in% c("none", "mar_strong")) %>%
       select(name = scenario_name),
     names = any_of("name"),
     batches = 20,
@@ -67,14 +67,20 @@ list(
     plot_results_no_missing(sim_reps_summary), 
     format = "file"
   ),
-  tar_target(
-    save_results_null, 
-    plot_results_null(sim_reps_summary), 
-    format = "file"
-  ),
-  tar_target(
-    save_results_main, 
-    plot_results_main(sim_reps_summary), 
-    format = "file"
+  tar_map(
+    expand_grid(
+      outcome_missingness = c("no", "yes"),
+      sample_size = c("small", "large")
+    ),
+    tar_target(
+      save_results_null, 
+      plot_results_null(sim_reps_summary, outcome_missingness, sample_size), 
+      format = "file"
+    ),
+    tar_target(
+      save_results_main, 
+      plot_results_main(sim_reps_summary, outcome_missingness, sample_size), 
+      format = "file"
+    )
   )
 )
