@@ -12,12 +12,13 @@ library(mice)
 library(withr)
 library(sandwich)
 library(cowplot)
+library(here)
 
-source("R/data-generation.R")
-source("R/estimators.R")
-source("R/missingness-methods.R")
-source("R/scenarios.R")
-source("R/summaries.R")
+source(here("R", "data-generation.R"))
+source(here("R", "estimators.R"))
+source(here("R", "missingness-methods.R"))
+source(here("R", "scenarios.R"))
+source(here("R", "summaries.R"))
 
 # Set overall targets options
 tar_option_set(

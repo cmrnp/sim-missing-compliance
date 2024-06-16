@@ -82,13 +82,19 @@ plot_results_no_missing <- function(sim_reps_summary) {
       theme_cp(grid = "x"),
     ncol = 1
   )
-  ggsave("plots/no_missing.png", width = 7, height = 9, dpi = 300)
+  ggsave(
+    here("plots", "no_missing.png"),
+    width = 7, height = 9, dpi = 300
+  )
 }
 
-plot_results_null <- function(sim_reps_summary, outcome_missingness_, sample_size_) {
+plot_results_null <- function(
+    sim_reps_summary, outcome_missingness_, sample_size_
+) {
   dat <- sim_reps_summary %>%
     filter(treatment_effect == "null", missingness_mechanism != "none",
-           outcome_missingness == outcome_missingness_, sample_size == sample_size_)
+           outcome_missingness == outcome_missingness_,
+           sample_size == sample_size_)
   plot_grid(
     ggplot(dat, aes(y = missingness_name, x = bias,
                     xmin = bias - 1.96*bias_se, xmax = bias + 1.96*bias_se,
@@ -128,7 +134,10 @@ plot_results_null <- function(sim_reps_summary, outcome_missingness_, sample_siz
       theme_cp(grid = "x"),
     ncol = 1
   )
-  ggsave(glue("plots/null_{sample_size_}_{outcome_missingness_}.png"), width = 7, height = 5, dpi = 300)
+  ggsave(
+    here("plots", glue("null_{sample_size_}_{outcome_missingness_}.png")),
+    width = 7, height = 5, dpi = 300
+  )
 }
 
 plot_results_main <- function(
@@ -161,7 +170,10 @@ plot_results_main <- function(
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p1 <- ggsave(glue("plots/main_bias_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
+  p1 <- ggsave(
+    here("plots", glue("main_bias_{sample_size_}_{outcome_missingness_}.png")),
+    width = 6, height = 4, dpi = 300
+  )
   ggplot(dat, aes(y = missingness_name, x = rel_rmse,
                   colour = estimator_name, shape = estimator_name)) +
     expand_limits(x = 0) +
@@ -174,7 +186,10 @@ plot_results_main <- function(
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p2 <- ggsave(glue("plots/main_rmse_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
+  p2 <- ggsave(
+    here("plots", glue("main_rmse_{sample_size_}_{outcome_missingness_}.png")),
+    width = 6, height = 4, dpi = 300
+  )
   ggplot(dat, aes(y = missingness_name, x = rel_se_empirical,
                   colour = estimator_name, shape = estimator_name)) +
     expand_limits(x = 0) +
@@ -187,7 +202,9 @@ plot_results_main <- function(
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p3 <- ggsave(glue("plots/main_se_empirical_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
+  p3 <- ggsave(
+    here("plots", glue("main_se_empirical_{sample_size_}_{outcome_missingness_}.png")),
+    width = 6, height = 4, dpi = 300)
   ggplot(dat, aes(y = missingness_name, x = ci_coverage,
                   colour = estimator_name, shape = estimator_name)) +
     expand_limits(x = 1) +
@@ -201,6 +218,9 @@ plot_results_main <- function(
     theme_cp(grid = "x") +
     theme(strip.text = element_text(size = rel(8/11)),
           legend.position = "bottom")
-  p4 <- ggsave(glue("plots/main_ci_coverage_{sample_size_}_{outcome_missingness_}.png"), width = 6, height = 4, dpi = 300)
+  p4 <- ggsave(
+    here("plots", glue("main_ci_coverage_{sample_size_}_{outcome_missingness_}.png")),
+    width = 6, height = 4, dpi = 300
+  )
   c(p1, p2, p3, p4)
 }
