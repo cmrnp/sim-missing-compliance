@@ -1,6 +1,7 @@
 library(targets)
 library(tarchetypes)
 library(crew)
+library(crew.cluster)
 library(tidyverse)
 library(glue)
 library(marginaleffects)
