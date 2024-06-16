@@ -33,7 +33,7 @@ if (Sys.info()["nodename"] == "dev2") {
       pbs_walltime_hours = 168,
       script_lines = "
 #PBS -q batch
-#PBS -A CEBU1
+#PBS -A cebu1
 module load R/4.3.2
 "
     )
