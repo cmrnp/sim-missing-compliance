@@ -119,7 +119,6 @@ make_plot_results_no_missing <- function(sim_reps_summary) {
   blank_dat <- tribble(
     ~value, ~parameter,
     0, "Root-mean-square error",
-    0, "Standard error (empirical)",
     1, "Coverage of\n95% confidence intervals"
   ) %>%
     mutate(parameter = fct_inorder(parameter)) %>%
@@ -187,7 +186,7 @@ make_plot_results_null <- function(sim_reps_summary) {
     bias = do_plot(rel_bias, "Bias", xintercept = 0),
     rmse = do_plot(rel_rmse, "Root-mean-square error", xexpand = 0),
     se_empirical =
-      do_plot(rel_se_empirical, "Standard error (empirical)", xexpand = 0),
+      do_plot(rel_se_empirical, "Standard error (empirical)"),
     ci_coverage =
       do_plot(ci_coverage, "Coverage of 95% confidence intervals",
               xintercept = 0.95, xexpand = 1)
@@ -258,7 +257,7 @@ make_plot_results_main <- function(
     bias = do_plot(rel_bias, "Bias", xintercept = 0),
     rmse = do_plot(rel_rmse, "Root-mean-square error", xexpand = 0),
     se_empirical =
-      do_plot(rel_se_empirical, "Standard error (empirical)", xexpand = 0),
+      do_plot(rel_se_empirical, "Standard error (empirical)"),
     ci_coverage =
       do_plot(ci_coverage, "Coverage of 95% confidence intervals",
               xintercept = 0.95, xexpand = 1)
