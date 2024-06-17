@@ -1,4 +1,8 @@
-# Summarise results of simulations: (relative) bias
+# Summarise results of simulations:
+# - (relative) bias
+# - (relative) empirical standard error
+# - (relative) model-based standard error
+# - confidence interval coverage
 summarise_sim_reps <- function(sim_reps) {
   sim_reps %>%
     mutate(across(c(scenario_name, treatment_effect, compliance, dose_response,
@@ -6,7 +10,8 @@ summarise_sim_reps <- function(sim_reps) {
                     missingness_name, estimator_name),
                   fct_inorder)) %>%
     drop_na(error, std.error) %>%
-    mutate(rel_error = error / true_effect) %>%
+    mutate(rel_error = error / true_effect,
+           rel_std_error = std.error / true_effect) %>%
     group_by(
       scenario_name, 
       treatment_effect, compliance, dose_response,
@@ -14,20 +19,42 @@ summarise_sim_reps <- function(sim_reps) {
       missingness_name, estimator_name
     ) %>%
     summarise(
+      n = n(),
       bias = mean(error),
-      bias_se = sd(error) / sqrt(n()),
+      bias_mcse = sd(error) / sqrt(n()),
       se_empirical = sd(error),
+      se_empirical_mcse = se_empirical / sqrt(2 * (n() - 1)),
       se_model = sqrt(mean(std.error^2)),
+      se_model_mcse = sqrt(sd(std.error^2) / n()),
       rmse = sqrt(mean(error^2)),
+      rmse_mcse = sqrt(sd(error^2) / n()),
       rel_bias = mean(rel_error),
-      rel_bias_se = sd(rel_error) / sqrt(n()),
+      rel_bias_mcse = sd(rel_error) / sqrt(n()),
       rel_se_empirical = sd(rel_error),
-      rel_se_model = sqrt(mean(rel_error^2)),
+      rel_se_empirical_mcse = rel_se_empirical / sqrt(2 * (n() - 1)),
+      rel_se_model = sqrt(mean(rel_std_error^2)),
+      rel_se_model_mcse = sqrt(sd(rel_std_error^2) / n()),
       rel_rmse = sqrt(mean(rel_error^2)),
+      rel_rmse_mcse = sqrt(sd(rel_error^2) / n()),
       ci_coverage = mean(ci_includes_truth),
-      ci_coverage_se = sqrt(ci_coverage * (1 - ci_coverage) / n()),
+      ci_coverage_mcse = sqrt(ci_coverage * (1 - ci_coverage) / n()),
     ) %>%
-    ungroup()
+    ungroup() %>%
+    mutate(
+      missingness_name = 
+        fct_relabel(missingness_name, \(x) str_replace_all(x, "_", " ")),
+      treatment_effect = 
+        fct_relabel(treatment_effect, \(x) str_replace_all(x, "_", " ")),
+      treatment_effect = 
+        fct_relabel(treatment_effect, \(x) str_replace_all(x, "compliance", "compl")),
+      missingness_mechanism = 
+        fct_relabel(missingness_mechanism, \(x) str_replace_all(x, "_", " ")),
+    )
+}
+
+# Giant results table
+full_results_table <- function(sim_reps_summary) {
+  stop("FIXME")
 }
 
 # Plot theme - maybe this will be moved into a cpmisc package one day
@@ -47,11 +74,9 @@ make_plot_results_no_missing <- function(sim_reps_summary) {
     filter(missingness_mechanism == "none", treatment_effect != "null")
   list(
     bias = ggplot(dat, aes(y = estimator_name, x = rel_bias,
-                    xmin = rel_bias - 1.96*rel_bias_se, 
-                    xmax = rel_bias + 1.96*rel_bias_se,
-                    colour = sample_size, shape = sample_size)) +
+                           colour = sample_size, shape = sample_size)) +
       geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
-      geom_pointrange(position = position_dodge(0.25)) +
+      geom_point(position = position_dodge(0.25), size = 2.5) +
       scale_y_discrete(limits = rev) +
       facet_wrap(vars(treatment_effect)) +
       labs(x = "Relative bias", y = NULL) +
@@ -73,12 +98,10 @@ make_plot_results_no_missing <- function(sim_reps_summary) {
       labs(x = "Relative standard error (empirical)", y = NULL) +
       theme_cp(grid = "x"),
     ci_coverage = ggplot(dat, aes(y = estimator_name, x = ci_coverage,
-                    xmin = ci_coverage - 1.96*ci_coverage_se, 
-                    xmax = ci_coverage + 1.96*ci_coverage_se,
-                    colour = sample_size, shape = sample_size)) +
+                                  colour = sample_size, shape = sample_size)) +
       expand_limits(x = 1) +
       geom_vline(xintercept = 0.95, linetype = "dashed", colour = "grey60") +
-      geom_pointrange(position = position_dodge(0.5)) +
+      geom_point(position = position_dodge(0.5), size = 2.5) +
       scale_y_discrete(limits = rev) +
       facet_wrap(vars(treatment_effect)) +
       labs(x = "Coverage of 95% confidence intervals", y = NULL) +
@@ -109,10 +132,9 @@ make_plot_results_null <- function(
            sample_size == sample_size_)
   list(
     bias = ggplot(dat, aes(y = missingness_name, x = bias,
-                    xmin = bias - 1.96*bias_se, xmax = bias + 1.96*bias_se,
-                    colour = estimator_name, shape = estimator_name)) +
+                           colour = estimator_name, shape = estimator_name)) +
       geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
-      geom_pointrange(position = position_dodge(0.5)) +
+      geom_point(position = position_dodge(0.5), size = 2.5) +
       scale_y_discrete(limits = rev) +
       facet_wrap(vars(missingness_mechanism)) +
       labs(x = "Bias", y = NULL) +
@@ -134,12 +156,10 @@ make_plot_results_null <- function(
       labs(x = "Standard error (empirical)", y = NULL) +
       theme_cp(grid = "x"),
     ci_coverage = ggplot(dat, aes(y = missingness_name, x = ci_coverage,
-                    xmin = ci_coverage - 1.96*ci_coverage_se, 
-                    xmax = ci_coverage + 1.96*ci_coverage_se,
-                    colour = estimator_name, shape = estimator_name)) +
+                                  colour = estimator_name, shape = estimator_name)) +
       expand_limits(x = 1) +
       geom_vline(xintercept = 0.95, linetype = "dashed", colour = "grey60") +
-      geom_pointrange(position = position_dodge(0.5)) +
+      geom_point(position = position_dodge(0.5), size = 2.5) +
       facet_wrap(vars(missingness_mechanism)) +
       scale_y_discrete(limits = rev) +
       labs(x = "Coverage of 95% confidence intervals", y = NULL) +
@@ -170,17 +190,7 @@ make_plot_results_main <- function(
     filter(treatment_effect != "null", missingness_mechanism != "none",
            estimator_name != "naive",
            outcome_missingness == outcome_missingness_,
-           sample_size == sample_size_) %>%
-    mutate(
-      missingness_name = 
-        fct_relabel(missingness_name, \(x) str_replace_all(x, "_", " ")),
-      treatment_effect = 
-        fct_relabel(treatment_effect, \(x) str_replace_all(x, "_", " ")),
-      treatment_effect = 
-        fct_relabel(treatment_effect, \(x) str_replace_all(x, "compliance", "compl")),
-      missingness_mechanism = 
-        fct_relabel(missingness_mechanism, \(x) str_replace_all(x, "_", " ")),
-    )
+           sample_size == sample_size_)
   list(
     bias = ggplot(dat, aes(y = missingness_name, x = rel_bias,
                            colour = estimator_name, shape = estimator_name)) +
