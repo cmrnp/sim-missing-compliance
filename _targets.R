@@ -58,22 +58,23 @@ list(
     save_plot_results_no_missing(plot_results_no_missing), 
     format = "file"
   ),
+
+  # null treatment effect
+  tar_target(
+    plot_results_null, 
+    make_plot_results_null(sim_reps_summary), 
+  ),
+  tar_target(
+    save_results_null, 
+    save_plot_results_null(plot_results_null), 
+    format = "file"
+  ),
   
   # Plot results for all scenarios with missing data
   tar_map(
     expand_grid(
       sample_size = c("small", "large"),
       outcome_missingness = c("no", "yes"),
-    ),
-    # null treatment effect
-    tar_target(
-      plot_results_null, 
-      make_plot_results_null(sim_reps_summary, outcome_missingness, sample_size), 
-    ),
-    tar_target(
-      save_results_null, 
-      save_plot_results_null(plot_results_null, outcome_missingness, sample_size), 
-      format = "file"
     ),
     
     # non-null treatment effect

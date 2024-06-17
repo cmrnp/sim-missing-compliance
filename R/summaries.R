@@ -10,8 +10,10 @@ summarise_sim_reps <- function(sim_reps) {
                     missingness_name, estimator_name),
                   fct_inorder)) %>%
     drop_na(error, std.error) %>%
-    mutate(rel_error = error / true_effect,
-           rel_std_error = std.error / true_effect) %>%
+    mutate(
+      rel_error = if_else(true_effect < 1e-6, error, error / true_effect),
+      rel_std_error = if_else(true_effect < 1e-6, std.error, std.error / true_effect)
+    ) %>%
     group_by(
       scenario_name, 
       treatment_effect, compliance, dose_response,
@@ -90,102 +92,105 @@ theme_cp <- function(panel_border = TRUE, grid = "none") {
   }
 }
 
-# Plots for scenarios with no missing data (excluding null treatment effects)
+# Plots for scenarios with no missing data
 make_plot_results_no_missing <- function(sim_reps_summary) {
   dat <- sim_reps_summary %>%
-    filter(missingness_mechanism == "none", treatment_effect != "null")
-  list(
-    bias = ggplot(dat, aes(y = estimator_name, x = rel_bias,
-                           colour = sample_size, shape = sample_size)) +
-      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
-      geom_point(position = position_dodge(0.25), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_wrap(vars(treatment_effect)) +
-      labs(x = "Relative bias", y = NULL) +
-      theme_cp(grid = "x"),
-    rmse = ggplot(dat, aes(y = estimator_name, x = rel_rmse,
-                    colour = sample_size, shape = sample_size)) +
-      expand_limits(x = 0) +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_wrap(vars(treatment_effect)) +
-      labs(x = "Relative root-mean-square error", y = NULL) +
-      theme_cp(grid = "x"),
-    se_empirical = ggplot(dat, aes(y = estimator_name, x = rel_se_empirical,
-                    colour = sample_size, shape = sample_size)) +
-      expand_limits(x = 0) +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_wrap(vars(treatment_effect)) +
-      labs(x = "Relative standard error (empirical)", y = NULL) +
-      theme_cp(grid = "x"),
-    ci_coverage = ggplot(dat, aes(y = estimator_name, x = ci_coverage,
-                                  colour = sample_size, shape = sample_size)) +
-      expand_limits(x = 1) +
-      geom_vline(xintercept = 0.95, linetype = "dashed", colour = "grey60") +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_wrap(vars(treatment_effect)) +
-      labs(x = "Coverage of 95% confidence intervals", y = NULL) +
-      theme_cp(grid = "x")
-  )
+    filter(missingness_mechanism == "none") %>%
+    pivot_longer(c(rel_bias, rel_rmse, rel_se_empirical, ci_coverage),
+                 names_to = "parameter",
+                 values_to = "value") %>%
+    mutate(
+      parameter = fct_inorder(parameter),
+      parameter = fct_recode(
+        parameter,
+        "Bias" = "rel_bias",
+        "Root-mean-square error" = "rel_rmse",
+        "Standard error (empirical)" = "rel_se_empirical",
+        "Coverage of\n95% confidence intervals" = "ci_coverage"
+      )
+    )
+  vline_dat <- tribble(
+    ~xintercept, ~parameter,
+    0, "Bias",
+    0.95, "Coverage of\n95% confidence intervals"
+  ) %>%
+    mutate(parameter = fct_inorder(parameter)) %>%
+    expand_grid(sample_size = unique(sim_reps_summary$sample_size))
+  blank_dat <- tribble(
+    ~value, ~parameter,
+    0, "Root-mean-square error",
+    0, "Standard error (empirical)",
+    1, "Coverage of\n95% confidence intervals"
+  ) %>%
+    mutate(parameter = fct_inorder(parameter)) %>%
+    expand_grid(sample_size = unique(sim_reps_summary$sample_size),
+                treatment_effect = unique(sim_reps_summary$treatment_effect),
+                estimator_name = unique(sim_reps_summary$estimator_name))
+  ggplot(dat, aes(y = treatment_effect, x = value,
+                  colour = estimator_name, shape = estimator_name)) +
+    geom_vline(data = vline_dat, aes(xintercept = xintercept),
+               linetype = "dashed", colour = "grey60") +
+    geom_blank(data = blank_dat) +
+    geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
+    scale_y_discrete(limits = rev) +
+    facet_grid(cols = vars(parameter),
+               rows = vars(sample_size),
+               scales = "free_x") +
+    labs(x = NULL, y = NULL, colour = "estimator", shape = "estimator") +
+    theme_cp(grid = "x") +
+    theme(strip.text = element_text(size = rel(8/11)),
+          legend.position = "bottom")
 }
 
 # Save plot of results for no-missing-data scenarios
-save_plot_results_no_missing <- function(plot_list) {
-  p <- plot_grid(
-    plotlist = plot_list,
-    ncol = 1
-  )
+save_plot_results_no_missing <- function(p) {
   ggsave(
     here("plots", "no_missing.png"),
     plot = p,
-    width = 7, height = 9, dpi = 300
+    width = 7, height = 4, dpi = 300
   )
 }
 
 # Plots for scenarios with null treatment effects (excl. no-missing-data)
-make_plot_results_null <- function(
-    sim_reps_summary, outcome_missingness_, sample_size_
-) {
+make_plot_results_null <- function(sim_reps_summary) {
   dat <- sim_reps_summary %>%
-    filter(treatment_effect == "null", missingness_mechanism != "none",
-           outcome_missingness == outcome_missingness_,
-           sample_size == sample_size_)
+    filter(treatment_effect == "null",
+           missingness_mechanism != "none") %>%
+    mutate(outcome_missingness = fct_recode(
+      outcome_missingness,
+      "complete outcome" = "no",
+      "incomplete outcome" = "yes"
+    ))
+  do_plot <- function(parameter, parameter_label, xintercept = NULL, xexpand = NULL) {
+    p <- ggplot(dat, aes(y = missingness_name, x = {{ parameter }},
+                         colour = estimator_name, shape = estimator_name))
+    if (!is.null(xintercept)) {
+      p <- p +
+        geom_vline(xintercept = xintercept,
+                   linetype = "dashed", colour = "grey60")
+    }
+    if (!is.null(xexpand)) {
+      p <- p + expand_limits(x = 0)
+    }
+    p <- p +
+      geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
+      scale_y_discrete(limits = rev) +
+      facet_grid(cols = vars(outcome_missingness, sample_size),
+                 rows = vars(missingness_mechanism)) +
+      labs(x = parameter_label, y = NULL,
+           colour = "estimator", shape = "estimator") +
+      theme_cp(grid = "x") +
+      theme(strip.text = element_text(size = rel(8/11)),
+            legend.position = "bottom")
+  }
   list(
-    bias = ggplot(dat, aes(y = missingness_name, x = bias,
-                           colour = estimator_name, shape = estimator_name)) +
-      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_wrap(vars(missingness_mechanism)) +
-      labs(x = "Bias", y = NULL) +
-      theme_cp(grid = "x"),
-    rmse = ggplot(dat, aes(y = missingness_name, x = rmse,
-                    colour = estimator_name, shape = estimator_name)) +
-      expand_limits(x = 0) +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      facet_wrap(vars(missingness_mechanism)) +
-      scale_y_discrete(limits = rev) +
-      labs(x = "Root-mean-square error", y = NULL) +
-      theme_cp(grid = "x"),
-    se_empirical = ggplot(dat, aes(y = missingness_name, x = se_empirical,
-                    colour = estimator_name, shape = estimator_name)) +
-      expand_limits(x = 0) +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      facet_wrap(vars(missingness_mechanism)) +
-      scale_y_discrete(limits = rev) +
-      labs(x = "Standard error (empirical)", y = NULL) +
-      theme_cp(grid = "x"),
-    ci_coverage = ggplot(dat, aes(y = missingness_name, x = ci_coverage,
-                                  colour = estimator_name, shape = estimator_name)) +
-      expand_limits(x = 1) +
-      geom_vline(xintercept = 0.95, linetype = "dashed", colour = "grey60") +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      facet_wrap(vars(missingness_mechanism)) +
-      scale_y_discrete(limits = rev) +
-      labs(x = "Coverage of 95% confidence intervals", y = NULL) +
-      theme_cp(grid = "x")
+    bias = do_plot(rel_bias, "Bias", xintercept = 0),
+    rmse = do_plot(rel_rmse, "Root-mean-square error", xexpand = 0),
+    se_empirical =
+      do_plot(rel_se_empirical, "Standard error (empirical)", xexpand = 0),
+    ci_coverage =
+      do_plot(ci_coverage, "Coverage of 95% confidence intervals",
+              xintercept = 0.95, xexpand = 1)
   )
 }
 
@@ -193,14 +198,27 @@ make_plot_results_null <- function(
 save_plot_results_null <- function(
     plot_list, outcome_missingness_, sample_size_
 ) {
-  p <- plot_grid(
-    plotlist = plot_list,
-    ncol = 1
-  )
-  ggsave(
-    here("plots", glue("null_{sample_size_}_{outcome_missingness_}.png")),
-    plot = p,
-    width = 7, height = 5, dpi = 300
+  c(
+    ggsave(
+      here("plots", glue("null_bias.png")),
+      plot = plot_list$bias,
+      width = 6, height = 4, dpi = 300
+    ),
+    ggsave(
+      here("plots", glue("null_rmse.png")),
+      plot = plot_list$rmse,
+      width = 6, height = 4, dpi = 300
+    ),
+    ggsave(
+      here("plots", glue("null_se_empirical.png")),
+      plot = plot_list$se_empirical,
+      width = 6, height = 4, dpi = 300
+    ),
+    ggsave(
+      here("plots", glue("null_ci_coverage.png")),
+      plot = plot_list$ci_coverage,
+      width = 6, height = 4, dpi = 300
+    )
   )
 }
 
@@ -209,60 +227,41 @@ make_plot_results_main <- function(
     sim_reps_summary, outcome_missingness_, sample_size_
 ) {
   dat <- sim_reps_summary %>%
-    filter(treatment_effect != "null", missingness_mechanism != "none",
+    filter(missingness_mechanism != "none",
+           treatment_effect != "null",
            estimator_name != "naive",
            outcome_missingness == outcome_missingness_,
            sample_size == sample_size_)
-  list(
-    bias = ggplot(dat, aes(y = missingness_name, x = rel_bias,
-                           colour = estimator_name, shape = estimator_name)) +
-      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
-      geom_point(size = 2.5) +
+  do_plot <- function(parameter, parameter_label, xintercept = NULL, xexpand = NULL) {
+    p <- ggplot(dat, aes(y = missingness_name, x = {{ parameter }},
+                    colour = estimator_name, shape = estimator_name))
+    if (!is.null(xintercept)) {
+      p <- p +
+        geom_vline(xintercept = xintercept,
+                   linetype = "dashed", colour = "grey60")
+    }
+    if (!is.null(xexpand)) {
+      p <- p + expand_limits(x = 0)
+    }
+    p <- p +
+      geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
       scale_y_discrete(limits = rev) +
       facet_grid(cols = vars(treatment_effect),
                  rows = vars(missingness_mechanism)) +
-      labs(x = "Relative bias", y = NULL,
-           colour = "estimator", shape = "estimator") +
-      theme_cp(grid = "x") +
-      theme(strip.text = element_text(size = rel(8/11)),
-            legend.position = "bottom"),
-    rmse = ggplot(dat, aes(y = missingness_name, x = rel_rmse,
-                           colour = estimator_name, shape = estimator_name)) +
-      expand_limits(x = 0) +
-      geom_point(position = position_dodge(0.5), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_grid(cols = vars(treatment_effect),
-                 rows = vars(missingness_mechanism)) +
-      labs(x = "Relative root-mean-square error", y = NULL,
-           colour = "estimator", shape = "estimator") +
-      theme_cp(grid = "x") +
-      theme(strip.text = element_text(size = rel(8/11)),
-            legend.position = "bottom"),
-    se_empirical = ggplot(dat, aes(y = missingness_name, x = rel_se_empirical,
-                                   colour = estimator_name, shape = estimator_name)) +
-      expand_limits(x = 0) +
-      geom_point(position = position_dodge(0.25), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_grid(cols = vars(treatment_effect),
-                 rows = vars(missingness_mechanism)) +
-      labs(x = "Relative standard error (empirical)", y = NULL,
-           colour = "estimator", shape = "estimator") +
-      theme_cp(grid = "x") +
-      theme(strip.text = element_text(size = rel(8/11)),
-            legend.position = "bottom"),
-    ci_coverage = ggplot(dat, aes(y = missingness_name, x = ci_coverage,
-                                  colour = estimator_name, shape = estimator_name)) +
-      expand_limits(x = 1) +
-      geom_vline(xintercept = 0.95, linetype = "dashed", colour = "grey60") +
-      geom_point(position = position_dodge(0.25), size = 2.5) +
-      scale_y_discrete(limits = rev) +
-      facet_grid(cols = vars(treatment_effect),
-                 rows = vars(missingness_mechanism)) +
-      labs(x = "Coverage of 95% confidence intervals", y = NULL,
+      labs(x = parameter_label, y = NULL,
            colour = "estimator", shape = "estimator") +
       theme_cp(grid = "x") +
       theme(strip.text = element_text(size = rel(8/11)),
             legend.position = "bottom")
+  }
+  list(
+    bias = do_plot(rel_bias, "Bias", xintercept = 0),
+    rmse = do_plot(rel_rmse, "Root-mean-square error", xexpand = 0),
+    se_empirical =
+      do_plot(rel_se_empirical, "Standard error (empirical)", xexpand = 0),
+    ci_coverage =
+      do_plot(ci_coverage, "Coverage of 95% confidence intervals",
+              xintercept = 0.95, xexpand = 1)
   )
 }
 
