@@ -15,9 +15,6 @@
 # targets metadata
 /_targets/
 
-# output files
-/plots/
-
 # RStudio files
 .Rproj.user/
 
