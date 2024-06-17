@@ -170,7 +170,7 @@ make_plot_results_null <- function(sim_reps_summary) {
                    linetype = "dashed", colour = "grey60")
     }
     if (!is.null(xexpand)) {
-      p <- p + expand_limits(x = 0)
+      p <- p + expand_limits(x = xexpand)
     }
     p <- p +
       geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
@@ -241,7 +241,7 @@ make_plot_results_main <- function(
                    linetype = "dashed", colour = "grey60")
     }
     if (!is.null(xexpand)) {
-      p <- p + expand_limits(x = 0)
+      p <- p + expand_limits(x = xexpand)
     }
     p <- p +
       geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
