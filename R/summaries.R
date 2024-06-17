@@ -57,6 +57,28 @@ full_results_table <- function(sim_reps_summary) {
   stop("FIXME")
 }
 
+mcse_summary_df <- function(sim_reps_summary) {
+  sim_reps_summary %>%
+    rename_with(
+      \(x) if_else(str_ends(x, "_mcse"), x, glue("{x}_estimate")),
+      .cols = bias:ci_coverage_mcse
+    ) %>%
+    pivot_longer(
+      cols = bias_estimate:ci_coverage_mcse,
+      names_pattern = "^([a-z_]+)_(estimate|mcse)$",
+      names_to = c("parameter", ".value"),
+    ) %>%
+    mutate(parameter = fct_inorder(parameter)) %>%
+    group_by(parameter) %>%
+    summarise(
+      min_mcse = min(mcse, na.rm = TRUE),
+      q1_mcse = quantile(mcse, 0.25, na.rm = TRUE),
+      med_mcse = median(mcse, na.rm = TRUE),
+      q3_mcse = quantile(mcse, 0.75, na.rm = TRUE),
+      max_mcse = max(mcse, na.rm = TRUE)
+    )
+}
+
 # Plot theme - maybe this will be moved into a cpmisc package one day
 theme_cp <- function(panel_border = TRUE, grid = "none") {
   t <- theme_cowplot(font_size = 11, rel_small = 9/11,
