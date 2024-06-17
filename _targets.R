@@ -44,25 +44,46 @@ list(
     reps = 100,
     combine = TRUE,
   ),
+  
+  # Generate summary data frame of indiviudal replicate results
   tar_target(sim_reps_summary, summarise_sim_reps(sim_reps)),
+  
+  # Plot results for no-missing-data scenarios
+  tar_target(
+    plot_results_no_missing, 
+    make_plot_results_no_missing(sim_reps_summary)
+  ),
   tar_target(
     save_results_no_missing, 
-    plot_results_no_missing(sim_reps_summary), 
+    save_plot_results_no_missing(plot_results_no_missing), 
     format = "file"
   ),
+  
+  # Plot results for all scenarios with missing data
   tar_map(
     expand_grid(
+      sample_size = c("small", "large"),
       outcome_missingness = c("no", "yes"),
-      sample_size = c("small", "large")
+    ),
+    # null treatment effect
+    tar_target(
+      plot_results_null, 
+      make_plot_results_null(sim_reps_summary, outcome_missingness, sample_size), 
     ),
     tar_target(
       save_results_null, 
-      plot_results_null(sim_reps_summary, outcome_missingness, sample_size), 
+      save_plot_results_null(plot_results_null, outcome_missingness, sample_size), 
       format = "file"
+    ),
+    
+    # non-null treatment effect
+    tar_target(
+      plot_results_main, 
+      make_plot_results_main(sim_reps_summary, outcome_missingness, sample_size),
     ),
     tar_target(
       save_results_main, 
-      plot_results_main(sim_reps_summary, outcome_missingness, sample_size), 
+      save_plot_results_main(plot_results_main, outcome_missingness, sample_size), 
       format = "file"
     )
   )
