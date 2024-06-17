@@ -1,11 +1,6 @@
 library(here)
 source(here("packages.R"))
 source(here("functions.R"))
-source(here("R", "data-generation.R"))
-source(here("R", "estimators.R"))
-source(here("R", "missingness-methods.R"))
-source(here("R", "scenarios.R"))
-source(here("R", "summaries.R"))
 
 # Set overall targets options
 tar_option_set(
