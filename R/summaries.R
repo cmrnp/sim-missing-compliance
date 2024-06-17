@@ -150,6 +150,39 @@ save_plot_results_no_missing <- function(p) {
   )
 }
 
+single_parameter_plot <- function(
+    dat,
+    parameter,
+    parameter_label,
+    facet_cols = NULL,
+    facet_rows = NULL,
+    facet_scales = "fixed",
+    xintercept = NULL,
+    xexpand = NULL
+) {
+  p <- ggplot(dat, aes(y = missingness_name, x = {{ parameter }},
+                       colour = estimator_name, shape = estimator_name))
+  if (!is.null(xintercept)) {
+    p <- p +
+      geom_vline(xintercept = xintercept,
+                 linetype = "dashed", colour = "grey60")
+  }
+  if (!is.null(xexpand)) {
+    p <- p + expand_limits(x = xexpand)
+  }
+  p <- p +
+    geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
+    scale_y_discrete(limits = rev) +
+    facet_grid(cols = facet_cols,
+               rows = facet_rows,
+               scales = facet_scales) +
+    labs(x = parameter_label, y = NULL,
+         colour = "estimator", shape = "estimator") +
+    theme_cp(grid = "x") +
+    theme(strip.text = element_text(size = rel(8/11)),
+          legend.position = "bottom")
+}
+
 # Plots for scenarios with null treatment effects (excl. no-missing-data)
 make_plot_results_null <- function(sim_reps_summary) {
   dat <- sim_reps_summary %>%
@@ -160,27 +193,13 @@ make_plot_results_null <- function(sim_reps_summary) {
       "complete outcome" = "no",
       "incomplete outcome" = "yes"
     ))
-  do_plot <- function(parameter, parameter_label, xintercept = NULL, xexpand = NULL) {
-    p <- ggplot(dat, aes(y = missingness_name, x = {{ parameter }},
-                         colour = estimator_name, shape = estimator_name))
-    if (!is.null(xintercept)) {
-      p <- p +
-        geom_vline(xintercept = xintercept,
-                   linetype = "dashed", colour = "grey60")
-    }
-    if (!is.null(xexpand)) {
-      p <- p + expand_limits(x = xexpand)
-    }
-    p <- p +
-      geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
-      scale_y_discrete(limits = rev) +
-      facet_grid(cols = vars(outcome_missingness, sample_size),
-                 rows = vars(missingness_mechanism)) +
-      labs(x = parameter_label, y = NULL,
-           colour = "estimator", shape = "estimator") +
-      theme_cp(grid = "x") +
-      theme(strip.text = element_text(size = rel(8/11)),
-            legend.position = "bottom")
+  do_plot <- function(...) {
+    single_parameter_plot(
+      dat,
+      facet_cols = vars(outcome_missingness, sample_size),
+      facet_rows = vars(missingness_mechanism),
+      ...
+    )
   }
   list(
     bias = do_plot(rel_bias, "Bias", xintercept = 0),
@@ -231,27 +250,13 @@ make_plot_results_main <- function(
            estimator_name != "naive",
            outcome_missingness == outcome_missingness_,
            sample_size == sample_size_)
-  do_plot <- function(parameter, parameter_label, xintercept = NULL, xexpand = NULL) {
-    p <- ggplot(dat, aes(y = missingness_name, x = {{ parameter }},
-                    colour = estimator_name, shape = estimator_name))
-    if (!is.null(xintercept)) {
-      p <- p +
-        geom_vline(xintercept = xintercept,
-                   linetype = "dashed", colour = "grey60")
-    }
-    if (!is.null(xexpand)) {
-      p <- p + expand_limits(x = xexpand)
-    }
-    p <- p +
-      geom_point(size = 2.5, position = position_dodge2(0.5, reverse = TRUE)) +
-      scale_y_discrete(limits = rev) +
-      facet_grid(cols = vars(treatment_effect),
-                 rows = vars(missingness_mechanism)) +
-      labs(x = parameter_label, y = NULL,
-           colour = "estimator", shape = "estimator") +
-      theme_cp(grid = "x") +
-      theme(strip.text = element_text(size = rel(8/11)),
-            legend.position = "bottom")
+  do_plot <- function(...) {
+    single_parameter_plot(
+      dat,
+      facet_cols = vars(treatment_effect),
+      facet_rows = vars(missingness_mechanism),
+      ...
+    )
   }
   list(
     bias = do_plot(rel_bias, "Bias", xintercept = 0),
