@@ -247,7 +247,7 @@ make_plot_results_main <- function(
   dat <- sim_reps_summary %>%
     filter(missingness_mechanism != "none",
            treatment_effect != "null",
-           # estimator_name != "naive",
+           estimator_name != "naive",
            outcome_missingness == outcome_missingness_,
            sample_size == sample_size_)
   do_plot <- function(...) {
