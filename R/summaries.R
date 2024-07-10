@@ -160,6 +160,9 @@ single_parameter_plot <- function(
     xintercept = NULL,
     xexpand = NULL
 ) {
+  if (nrow(dat) < 1) {
+    return(ggplot())
+  }
   p <- ggplot(dat, aes(y = missingness_name, x = {{ parameter }},
                        colour = estimator_name, shape = estimator_name))
   if (!is.null(xintercept)) {
