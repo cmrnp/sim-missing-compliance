@@ -71,15 +71,10 @@ missingness_mi_continuous <- function(dat, estimators, m = 50, iter = 10) {
 }
 
 missingness_ipw <- function(dat, estimators) {
-  # can't use ipw if outcome is missing
-  if (any(is.na(dat$outcome))) {
-    tibble()
-  }
-  
   dat <- dat %>%
-    mutate(complete_case = !is.na(dose))
+    mutate(complete_case = !is.na(dose) & !is.na(outcome))
   weights_model <- glm(
-    complete_case ~ trt*aux + trt*outcome,
+    complete_case ~ trt*aux + trt*confounder,
     family = binomial,
     data = dat
   )
