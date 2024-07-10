@@ -90,26 +90,26 @@ get_scenario_params <- function(scenarios, dgp_params) {
       # missingness parameters, exc. intercept
       miss_compliance_enabled = missingness_mechanism != "none",
       miss_compliance_b_aux = case_when(
-        missingness_mechanism == "mar_weak" ~ 0.1,
+        missingness_mechanism == "mar_weak" ~ 0.2,
         missingness_mechanism == "mar_strong" ~ 0.5,
         .default = 0.0
       ),
       miss_compliance_b_outcome = case_when(
-        missingness_mechanism == "mar_weak" ~ 0.1,
-        missingness_mechanism == "mar_strong" ~ 0.5,
+        missingness_mechanism == "mar_weak" ~ -0.2,
+        missingness_mechanism == "mar_strong" ~ -0.5,
         .default = 0.0
       ),
       
       miss_outcome_enabled = 
         missingness_mechanism != "none" & outcome_missingness == "yes",
       miss_outcome_b_aux = case_when(
-        missingness_mechanism == "mar_weak" ~ 0.1,
+        missingness_mechanism == "mar_weak" ~ 0.2,
         missingness_mechanism == "mar_strong" ~ 0.5,
         .default = 0.0
       ),
       miss_outcome_b_confounder = case_when(
-        missingness_mechanism == "mar_weak" ~ 0.1,
-        missingness_mechanism == "mar_strong" ~ 0.5,
+        missingness_mechanism == "mar_weak" ~ -0.2,
+        missingness_mechanism == "mar_strong" ~ -0.5,
         .default = 0.0
       ),
     ) %>%
