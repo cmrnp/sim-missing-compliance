@@ -46,7 +46,7 @@ estimator_standardisation <- function(dat, weights = NULL) {
 }
 
 # IPTW estimate
-estimator_iptw <- function(dat, weights = NULL) {
+estimator_iptw_glm <- function(dat, weights = NULL) {
   weights_model <- glm(
     dose_binary ~ trt*confounder,
     family = binomial,
@@ -73,10 +73,40 @@ estimator_iptw <- function(dat, weights = NULL) {
     select(estimate, std.error, conf.low, conf.high, df)
 }
 
+# IPTW estimate using GAM for weights
+estimator_iptw_gam <- function(dat, weights = NULL) {
+  dat$trt <- factor(dat$trt, levels = c("1", "0"))
+  weights_model <- gam(
+    dose_binary ~ trt + s(confounder, by = trt),
+    family = binomial,
+    data = dat
+  )
+  probs_out <- as.vector(predict(weights_model, type = "response"))
+  weights_out <- if_else(
+    dat$dose_binary == 1, 
+    1 / probs_out, 
+    1 / (1 - probs_out)
+  )
+  if (!is.null(weights)) {
+    # XXX is this legit?
+    weights_out <- weights_out * weights
+  }
+  m <- lm_robust(
+    outcome ~ dose_binary,
+    weights = weights_out,
+    data = dat,
+    se_type = "HC2"
+  )
+  tidy(m) %>%
+    filter(term == "dose_binary") %>%
+    select(estimate, std.error, conf.low, conf.high, df)
+}
+
 estimators <- tribble(
   ~estimator_name, ~estimator_fn,
   "naive", estimator_naive,
   "standardisation", estimator_standardisation,
-  "iptw", estimator_iptw
+  "iptw_glm", estimator_iptw_glm,
+  "iptw_gam", estimator_iptw_gam,
 )
 
