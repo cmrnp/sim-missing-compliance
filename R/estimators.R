@@ -75,17 +75,18 @@ estimator_iptw_glm <- function(dat, weights = NULL) {
 
 # IPTW estimate using GAM for weights
 estimator_iptw_gam <- function(dat, weights = NULL) {
-  dat$trt <- factor(dat$trt, levels = c("1", "0"))
   weights_model <- gam(
-    dose_binary ~ trt + s(confounder, by = trt),
+    dose_binary ~ s(confounder),
     family = binomial,
-    data = dat
+    data = filter(dat, trt == 1)
   )
-  probs_out <- as.vector(predict(weights_model, type = "response"))
-  weights_out <- if_else(
-    dat$dose_binary == 1, 
-    1 / probs_out, 
-    1 / (1 - probs_out)
+  probs_out <- as.vector(
+    predict(weights_model, type = "response", newdata = dat)
+  )
+  weights_out <- case_when(
+    dat$trt == 0 ~ 1,
+    dat$dose_binary == 1 ~ 1 / probs_out,
+    TRUE ~ 1 / (1 - probs_out)
   )
   if (!is.null(weights)) {
     # XXX is this legit?
