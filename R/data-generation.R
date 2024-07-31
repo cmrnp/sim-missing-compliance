@@ -41,8 +41,29 @@ get_sigmoid_params <- function(x1, y1, x2, y2) {
   res$par
 }
 
+inv_pbeta <- function(p, q, shape) {
+  res <- optimize(
+    function(x) {
+      (pbeta(q, x*shape, (1-x)*shape) - (1 - p))^2
+    },
+    interval = c(1e-8, 1 - 1e-8)
+  )
+  res$minimum
+}
+
+get_compliance_mu <- function(compliance_model, linpred, shape, threshold) {
+  if (compliance_model == "betareg") {
+    plogis(linpred)
+  } else if (compliance_model == "logistic") {
+    map_dbl(plogis(linpred), \(x) inv_pbeta(x, threshold, shape))
+  } else {
+    stop("compliance_model must be 'betareg' or 'logistic'")
+  }
+}
+
 generate_complete_df <- function(
     n,
+    compliance_model,
     compliance_intercept,
     compliance_b_confounder,
     compliance_b_aux,
@@ -65,10 +86,13 @@ generate_complete_df <- function(
     # confounder: N(0, 1)
     confounder = rnorm(n, 0, 1),
     # mean of compliance variable
-    compliance_mu = plogis(
+    compliance_mu = get_compliance_mu(
+      compliance_model,
       compliance_intercept +
         compliance_b_confounder * confounder +
-        compliance_b_aux * aux
+        compliance_b_aux * aux,
+      compliance_shape,
+      compliance_threshold
     ),
     # latent compliance (0 to 1). convert between parameterisations of beta
     # distribution using: alpha = mu*nu, beta = (1-mu)*nu
@@ -184,6 +208,7 @@ generate_scenario_data <- function(scenario_params) {
   # generate complete dataset, i.e. no missingness yet
   complete_dat <- generate_complete_df(
     n = scenario_params$n,
+    compliance_model = scenario_params$compliance_model,
     compliance_intercept = scenario_params$compliance_intercept,
     compliance_b_confounder = scenario_params$compliance_b_confounder,
     compliance_b_aux = scenario_params$compliance_b_aux,

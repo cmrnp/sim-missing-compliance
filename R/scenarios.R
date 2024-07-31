@@ -46,6 +46,7 @@ get_dgp_params <- function(scenarios) {
       ),
       
       # compliance
+      compliance_model = "logistic",
       compliance_intercept = case_when(
         compliance == "low" ~ get_compliance_intercept(0.5, 0.5, 0.5),
         compliance == "high" ~ get_compliance_intercept(0.8, 0.5, 0.5)
@@ -131,6 +132,7 @@ get_scenario_params <- function(scenarios, dgp_params) {
 
 run_scenario <- function(scenario_params) {
   dat <- generate_scenario_data(scenario_params)
+
   meth <- missingness_methods
   if (scenario_params$missingness_mechanism == "none") {
     meth <- filter(meth, missingness_name == "cc")

@@ -48,7 +48,7 @@ estimator_standardisation <- function(dat, weights = NULL) {
 # IPTW estimate
 estimator_iptw_glm <- function(dat, weights = NULL) {
   weights_model <- glm(
-    dose_binary ~ trt*confounder,
+    dose_binary ~ trt*confounder + trt*aux,
     family = binomial,
     data = dat
   )
@@ -76,7 +76,7 @@ estimator_iptw_glm <- function(dat, weights = NULL) {
 # IPTW estimate using GAM for weights
 estimator_iptw_gam <- function(dat, weights = NULL) {
   weights_model <- gam(
-    dose_binary ~ s(confounder),
+    dose_binary ~ s(confounder) + s(aux),
     family = binomial,
     data = filter(dat, trt == 1)
   )
@@ -107,6 +107,7 @@ estimators <- tribble(
   ~estimator_name, ~estimator_fn,
   "naive", estimator_naive,
   "standardisation", estimator_standardisation,
+#  "iptw", estimator_iptw_glm,
   "iptw_glm", estimator_iptw_glm,
   "iptw_gam", estimator_iptw_gam,
 )
