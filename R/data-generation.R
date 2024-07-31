@@ -69,7 +69,7 @@ generate_complete_df <- function(
     compliance_b_aux,
     compliance_shape,
     compliance_threshold,
-    dose_response_linear,
+    dose_response_model,
     dose_response_location,
     dose_response_shape,
     outcome_b_response,
@@ -113,11 +113,15 @@ generate_complete_df <- function(
     dose_binary = if_else(trt == 1, compliance_binary, 0),
     # response (0 to 1) - either linear or nonlinear w.r.t dose
     response = 
-      if (dose_response_linear) {
+      if (dose_response_model == "linear") {
         dose
-      } else {
+      } else if (dose_response_model == "nonlinear") {
         logit_sigmoid(dose, location = dose_response_location,
                       shape = dose_response_shape)
+      } else if (dose_response_model == "step") {
+        as.numeric(dose >= compliance_threshold)
+      } else {
+        stop("dose response model must be 'linear', 'nonlinear', or 'step'")
       },
     # mean of the outcome variable: 
     #  b1 * response + b2 * confounder
@@ -214,7 +218,7 @@ generate_scenario_data <- function(scenario_params) {
     compliance_b_aux = scenario_params$compliance_b_aux,
     compliance_shape = scenario_params$compliance_shape,
     compliance_threshold = scenario_params$compliance_threshold,
-    dose_response_linear = scenario_params$dose_response_linear,
+    dose_response_model = scenario_params$dose_response_model,
     dose_response_location = scenario_params$dose_response_location,
     dose_response_shape = scenario_params$dose_response_shape,
     outcome_b_response = scenario_params$outcome_b_response,

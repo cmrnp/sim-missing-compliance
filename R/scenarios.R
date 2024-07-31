@@ -4,9 +4,9 @@ get_scenario_list <- function() {
     treatment_effect = c(
       "null",
       "high_compliance_linear",
-      "high_compliance_nonlinear",
+      "high_compliance_step",
       "low_compliance_linear",
-      "low_compliance_nonlinear"
+      "low_compliance_step"
     ),
     sample_size = c("small", "large"),
     missingness_mechanism = c("none", "mcar", "mar_weak", "mar_strong"),
@@ -20,8 +20,8 @@ get_scenario_list <- function() {
         if_else(str_detect(treatment_effect, "high_compliance"), 
                 "high", "low"),
       dose_response = 
-        if_else(str_detect(treatment_effect, "_nonlinear"),
-                "nonlinear", "linear"),
+        if_else(str_detect(treatment_effect, "_step"),
+                "step", "linear"),
     ) %>%
     mutate(
       scenario_name = glue(
@@ -60,7 +60,7 @@ get_dgp_params <- function(scenarios) {
       compliance_threshold = 0.8,
       
       # dose-response
-      dose_response_linear = dose_response == "linear",
+      dose_response_model = dose_response,
       dose_response_location = get_sigmoid_params(0.5, 0.2, 0.8, 0.9)["location"],
       dose_response_shape = get_sigmoid_params(0.5, 0.2, 0.8, 0.9)["shape"],
       
