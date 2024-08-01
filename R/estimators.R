@@ -107,8 +107,8 @@ estimators <- tribble(
   ~estimator_name, ~estimator_fn,
   "naive", estimator_naive,
   "standardisation", estimator_standardisation,
-#  "iptw", estimator_iptw_glm,
-  "iptw_glm", estimator_iptw_glm,
-  "iptw_gam", estimator_iptw_gam,
+  "iptw", estimator_iptw_glm,
+#  "iptw_glm", estimator_iptw_glm,
+#  "iptw_gam", estimator_iptw_gam,
 )
 
