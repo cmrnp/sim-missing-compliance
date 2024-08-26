@@ -92,7 +92,6 @@ add_missingness_mar <- function(
       compliance = if_else(miss_compliance == 1, NA, compliance),
       compliance_binary = 
         if_else(miss_compliance == 1 & trt == 1, NA, compliance_binary),
-      dose = if_else(miss_compliance == 1 & trt == 1, NA, dose),
       dose_binary = 
         if_else(miss_compliance == 1 & trt == 1, NA, dose_binary),
       outcome = if_else(miss_outcome == 1, NA, outcome),
