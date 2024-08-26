@@ -30,8 +30,7 @@ get_scenario_list <- function() {
 scenario_list <- get_scenario_list()
 
 get_dgp_params <- function(scenarios) {
-  dgp_params <-
-    scenarios %>%
+  scenarios %>%
     distinct(sample_size, null, compliance) %>%
     mutate(
       # sample size
@@ -47,12 +46,16 @@ get_dgp_params <- function(scenarios) {
       ),
       compliance_b_confounder = 0.5,
       compliance_b_aux = 0.5,
-      compliance_intercept = 
-        get_compliance_intercept(compliance_prop, compliance_b_aux,
-                                 compliance_b_confounder),
 
       # outcome regression
       outcome_b_confounder = 0.5
+    ) %>%
+    group_by(compliance) %>%
+    mutate(
+      compliance_intercept = 
+        get_compliance_intercept(first(compliance_prop),
+                                 first(compliance_b_aux),
+                                 first(compliance_b_confounder)),
     ) %>%
     rowwise() %>%
     mutate(
