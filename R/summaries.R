@@ -5,18 +5,18 @@
 # - confidence interval coverage
 summarise_sim_reps <- function(sim_reps) {
   sim_reps %>%
-    mutate(across(c(scenario_name, treatment_effect, compliance, dose_response,
+    mutate(across(c(scenario_name, treatment_effect, compliance,
                     sample_size, missingness_mechanism, outcome_missingness,
                     missingness_name, estimator_name),
                   fct_inorder)) %>%
     drop_na(error, std.error) %>%
     mutate(
-      rel_error = if_else(true_effect < 1e-6, error, error / true_effect),
-      rel_std_error = if_else(true_effect < 1e-6, std.error, std.error / true_effect)
+      rel_error = if_else(abs(true_effect) < 1e-6, error, error / true_effect),
+      rel_std_error = if_else(abs(true_effect) < 1e-6, std.error, std.error / true_effect)
     ) %>%
     group_by(
       scenario_name, 
-      treatment_effect, compliance, dose_response,
+      treatment_effect, compliance,
       sample_size, missingness_mechanism, outcome_missingness,
       missingness_name, estimator_name
     ) %>%
