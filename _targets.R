@@ -4,7 +4,7 @@ source(here("functions.R"))
 
 # Set overall targets options
 tar_option_set(
-  seed = 202407,
+  seed = 202408,
   # error = "null"
 )
 
@@ -16,7 +16,7 @@ if (Sys.info()["nodename"] == "dev2") {
       pbs_walltime_hours = 168,
       script_lines = "
 #PBS -q batch
-#PBS -A cebu1
+#PBS -A cebu
 module load R/4.3.2
 "
     )
