@@ -1,0 +1,102 @@
+---
+title: "Missing compliance data simulation study protocol"
+subtitle: "Version 2 DRAFT"
+author: "Cameron Patrick"
+date: "26 August 2024"
+date-format: "D MMMM YYYY"
+format:
+  pdf:
+    documentclass: article
+    fontsize: 11pt
+    indent: false
+    papersize: a4
+    #mainfont: "Times New Roman"
+    #mathfont: "TeX Gyre Termes Math"
+---
+
+\raggedright
+
+# Proposed paper information
+
+**Working title:** Comparison of methods for estimating treatment efficacy under incomplete compliance data
+
+**Working author list:** Cameron J Patrick, Thomas R Sullivan, Margarita Moreno-Betancur, Katherine J Lee
+
+# Rationale and aims
+
+**Background:** Randomised controlled trials (RCTs) often target the treatment policy estimand, commonly referred to as the intention-to-treat estimand. For many interventions there is not perfect compliance with the randomised treatment assignment, and the estimate of the effect of being assigned to a treatment is less than the effect of complying with the treatment protocol. This effect of complying with the treatment is often called the efficacy of the treatment, distinguished from the effectiveness of the treatment which is the effect of treatment assignment.
+
+Two efficacy estimands are considered here. The first is the difference between all trial participants complying with the intervention and all trial participants complying with the control, sometimes referred to as the hypothetical or per-protocol estimand. Common methods used to estimate this estimand include the parametric g-formula and inverse probability of treatment weighting (IPTW). The second is the difference the complying with the intervention and not receiving the intervention, in the set of people who would comply with the intervention if assigned to it, sometimes referred to as the complier average causal effect (CACE) or principal stratification estimand. 
+
+Another common feature of RCTs in practice is missing data: some variables are not observed for some participants. Common approaches used to deal with missing data include complete case analysis, multiple imputation (MI) and inverse probability weighting (IPW). While these estimators and missing data methods are well-studied separately, and there is some literature regarding handling incomplete outcome data when estimating efficacy, there is no literature on the performance of these methods used together when the compliance variable is missing.
+
+**Broad aims:** Estimating treatment efficacy, i.e. the effect of complying with treatment rather than being assigned to treatment, in the presence of incomplete compliance data. While per-protocol treatment efficacy, CACE, and missing data have been individually studied at length, there is a gap in the literature around which methods work best for the "hypothetical" estimand or the "principal stratification" estimand when compliance data is incomplete.
+
+# Data generating mechanism
+
+The data will be simulated parametrically as follows:
+
+- Samples of a fixed size of observations ($N$) will be assigned 1:1 to 'intervention' and 'control' arms.
+- An auxiliary variable will be drawn from a $\mathrm{Normal}(0, 1)$ distribution, which will be associated with the compliance variable and probability of missingness. TODO real world example
+- A confounder variable will be drawn from a $\mathrm{Normal}(0, 1)$ distribution, which will be associated with the compliance variable and the outcome. TODO real world example
+- For simplicity, compliance with the intervention will be treated as binary; this could be the case in real trials where the intervention occurs at a single point. The compliance variable will be drawn from a Bernoulli distribution where the probability $p_i$ for each participant is calculated from a logistic regression equation: $\mathrm{logit}(p_i) = \gamma_0 + \gamma_1 \mathrm{confounder}_i + \gamma_2 \mathrm{aux}_i$. Two different values for $\gamma_0$ will be considered here, corresponding to high compliance (80%) and low compliance (50%).
+- It will be assumed that all participants in the control arm do not receive the intervention. In other words, all of the control group will be considered to comply with their assigned treatment, regardless of the simulated compliance variable. A 'treatment dose' variable will be created, indicating whether or not a particular participant received the treatment, based on the treatment arm and the compliance variable. For all participants in the control arm, it will be set to zero. For participants in the treatment arm, it will be set to the compliance variable.
+- The simulated outcome will be drawn from a $\mathrm{Normal}(\mu_i, 1)$ distribution, where the mean response $\mu_i$ will be calculated from the dose variable and the confounder using a linear regression equation: $\mu_i = \beta_0 + \beta_1 \mathrm{dose}_i + \beta_2 \mathrm{confounder}_i$.
+
+TODO draw DAGs
+
+After generating a complete dataset with no missing values, missing data will be introduced into the compliance data according to one of the following three missing data mechanisms:
+
+-	MCAR: each observation has a fixed probability of the compliance data being missing, drawn from an independent Bernoulli distribution
+-	Strong MAR: missingness in compliance is related to the outcome and aux variable via a logistic regression relationship: $\mathrm{logit}(p_i) = \eta_0 + \eta_1 \mathrm{outcome}_i + \eta_2 \mathrm{aux}_i$
+-	Weak MAR: as above but different coefficients
+
+Regression coefficients in the logistic relationships will be chosen so the overall probability of missingness is the same as for the MCAR scenario. All scenarios with missing data shall have a 30% probability of missingness in the compliance variable.
+
+An additional set of scenarios in which there is also missingness in the outcome variable may be considered, with missingness in the outcome related to the confounder and the auxiliary variable using a logistic regression equation. In this case the "MAR" scenarios are no longer truly MAR, but the estimand is still recoverable (???) TODO justify using m-DAG or remove.
+
+Two sample sizes will be considered, small ($N = 200$) and large ($N = 1000$). The effect size for each scenario ($\beta_1$ in the regression equation for the outcome) will be fixed so that power is 80% for a t-test targetting the treatment policy (ITT) estimand using the complete data.
+
+Additional scenarios featuring a null treatment effect will be included.
+
+A full factorial design with all combinations of incomplete variables/missingness mechanism (3x2), sample size (2), treatment effect (2), and compliance proportion (2).
+
+To ensure that the analysis methods perform as expected in the absence of missing data, scenarios with no missingness will be simulated and examined.
+
+# Estimand (target of analysis)
+
+Treatment efficacy. Either hypothetical/per-protocol estimand or principal stratification/CACE estimand. Under this data generating process, both targets should be the same, since there is no effect modification.
+
+The true value for each scenario will be determined by generating a very large dataset ($N = 10^6$) and applying the standardisation (parametric g-formula) estimator.
+
+# Methods
+
+This study will consider 3 methods for handling missing data and 4 methods for estimating the intervention efficacy after missing data has been dealt with. Each data generation scenario will be evaluated using every combination of missing data method and causal inference method.
+
+Missing data methods:
+
+- Complete case analysis
+- Multiple imputation
+- Inverse probability weighting
+
+Causal inference methods:
+
+- Standardisation (parametric g-formula), targeting hypothetical estimand
+- Inverse probability of treatment weighting (IPTW), targeting hypothetical estimand
+- Two-stage least square (2SLS) using the treatment assignment as an instrumental variable, targeting principal stratification estimand
+- Naive per-protocol, i.e. excluding non-compliers, which is known to be poor but commonly used in practice. Due to its extreme bias, considered only for complete data scenarios.
+
+# Evaluating performance
+
+Parameters estimated for each combination of scenario and method will be:
+
+-	Bias
+-	Standard error (empirical and model-based)
+-	Root-mean-square error
+-	Coverage of nominal 95% CIs
+
+Summaries of Monte Carlo errors will be reported for all of the above statistics. For each scenario, 2000 simulations will be generated, to target a Monte Carlo error of ± 1 percentage point for the coverage estimate.
+
+# References
+
+TODO add references to above
