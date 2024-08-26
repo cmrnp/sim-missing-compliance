@@ -61,7 +61,7 @@ missingness_mi_binary <- function(dat, estimators, m = 50, iter = 10) {
 # Inverse probability weighting for missing data
 missingness_ipw <- function(dat, estimators) {
   dat <- dat %>%
-    mutate(complete_case = !is.na(dose) & !is.na(outcome))
+    mutate(complete_case = !is.na(dose_binary) & !is.na(outcome))
   weights_model <- glm(
     complete_case ~ trt*aux + trt*outcome,
     family = binomial,
