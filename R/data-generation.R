@@ -60,33 +60,6 @@ generate_complete_df <- function(
   )
 }
 
-get_outcome_b_response <- function(args, power, interval = c(0, 2),
-                                   n.mc = 1e6, verbose = FALSE) {
-  res <- optimize(
-    f = function(par) {
-      call_args <- args
-      call_args$n <- n.mc
-      call_args$outcome_b_response <- par
-      dat <- do.call(generate_complete_df, call_args)
-      means <- tapply(dat$outcome, dat$trt, mean)
-      sds <- tapply(dat$outcome, dat$trt, sd)
-      pooled_sd <- sqrt(mean(sds^2))
-      mean_diff <- abs(means[2] - means[1])
-      achieved_power <- power.t.test(
-        n = args$n / 2, 
-        delta = mean_diff, 
-        sd = pooled_sd
-      )$power
-      if (verbose) {
-        cat("par =", par, "; mean_diff =", mean_diff, "; sd =", pooled_sd, 
-            "; achieved_power =", achieved_power, "\n")
-      }
-      (power - achieved_power)^2
-    },
-    interval = interval
-  )
-  res$minimum
-}
 
 add_missingness_mar <- function(
     df,
@@ -132,15 +105,9 @@ generate_scenario_data <- function(scenario_params) {
   # generate complete dataset, i.e. no missingness yet
   complete_dat <- generate_complete_df(
     n = scenario_params$n,
-    compliance_model = scenario_params$compliance_model,
     compliance_intercept = scenario_params$compliance_intercept,
     compliance_b_confounder = scenario_params$compliance_b_confounder,
     compliance_b_aux = scenario_params$compliance_b_aux,
-    compliance_shape = scenario_params$compliance_shape,
-    compliance_threshold = scenario_params$compliance_threshold,
-    dose_response_model = scenario_params$dose_response_model,
-    dose_response_location = scenario_params$dose_response_location,
-    dose_response_shape = scenario_params$dose_response_shape,
     outcome_b_response = scenario_params$outcome_b_response,
     outcome_b_confounder = scenario_params$outcome_b_confounder
   )
