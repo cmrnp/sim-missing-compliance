@@ -14,6 +14,7 @@ estimator_naive <- function(dat, weights = NULL) {
   }
   m %>%
     tidy(conf.int = TRUE) %>%
+    as_tibble() %>%
     filter(term == "trt") %>%
     select(estimate, std.error, conf.low, conf.high, df)
 }
@@ -45,7 +46,7 @@ estimator_standardisation <- function(dat, weights = NULL) {
     mutate(df = df)
 }
 
-# IPTW estimate
+# IPTW estimate using GLM for weights
 estimator_iptw_glm <- function(dat, weights = NULL) {
   weights_model <- glm(
     dose_binary ~ trt*confounder + trt*aux,
@@ -70,45 +71,43 @@ estimator_iptw_glm <- function(dat, weights = NULL) {
   )
   tidy(m) %>%
     filter(term == "dose_binary") %>%
+    as_tibble() %>%
     select(estimate, std.error, conf.low, conf.high, df)
 }
 
-# IPTW estimate using GAM for weights
-estimator_iptw_gam <- function(dat, weights = NULL) {
-  weights_model <- gam(
-    dose_binary ~ s(confounder) + s(aux),
-    family = binomial,
-    data = filter(dat, trt == 1)
-  )
-  probs_out <- as.vector(
-    predict(weights_model, type = "response", newdata = dat)
-  )
-  weights_out <- case_when(
-    dat$trt == 0 ~ 1,
-    dat$dose_binary == 1 ~ 1 / probs_out,
-    TRUE ~ 1 / (1 - probs_out)
-  )
-  if (!is.null(weights)) {
-    # XXX is this legit?
-    weights_out <- weights_out * weights
+# Instrumental variables (2SLS) estimator
+estimator_ivreg <- function(dat, weights = NULL) {
+  if (is.null(weights)) {
+    m <- ivreg(
+      outcome ~ dose_binary | trt,
+      data = dat
+    )
+    vcov_type <- TRUE
+    wts <- FALSE
+  } else {
+    m <- ivreg(
+      outcome ~ dose_binary | trt,
+      weights = weights, data = dat
+    )
+    vcov_type <- "HC2"
+    wts <- weights
   }
-  m <- lm_robust(
-    outcome ~ dose_binary,
-    weights = weights_out,
-    data = dat,
-    se_type = "HC2"
-  )
-  tidy(m) %>%
-    filter(term == "dose_binary") %>%
-    select(estimate, std.error, conf.low, conf.high, df)
+  df <- get_df(m)
+  avg_comparisons(
+    m, variables = "dose_binary", df = df, 
+    wts = wts, vcov = vcov_type
+  ) %>%
+    as_tibble() %>%
+    select(estimate, std.error, conf.low, conf.high) %>%
+    mutate(df = df)
 }
+
 
 estimators <- tribble(
   ~estimator_name, ~estimator_fn,
   "naive", estimator_naive,
   "standardisation", estimator_standardisation,
   "iptw", estimator_iptw_glm,
-#  "iptw_glm", estimator_iptw_glm,
-#  "iptw_gam", estimator_iptw_gam,
+  "iv", estimator_ivreg,
 )
 
