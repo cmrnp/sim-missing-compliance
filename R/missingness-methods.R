@@ -1,5 +1,6 @@
 # Methods for dealing with missing data
 
+# Complete case analysis: drop observations with any missing data
 missingness_cc <- function(dat, estimators) {
   dat_cc <- drop_na(dat, outcome, dose_binary)
   estimators %>%
@@ -7,6 +8,7 @@ missingness_cc <- function(dat, estimators) {
     reframe(estimator_fn(dat_cc))
 }
 
+# Run an estimator function on multiply imputed datasets and pool the results
 run_estimator_mi <- function(imp_all_df, estimator) {
   rows <- max(imp_all_df$.id)
   imp_results <- imp_all_df %>%
@@ -23,6 +25,7 @@ run_estimator_mi <- function(imp_all_df, estimator) {
   )
 }
 
+# Multiple imputation of binary compliance measure
 missingness_mi_binary <- function(dat, estimators, m = 50, iter = 10) {
   dat_for_imp <- dat %>%
     select(trt, aux, confounder, dose_binary, outcome) %>%
@@ -38,43 +41,29 @@ missingness_mi_binary <- function(dat, estimators, m = 50, iter = 10) {
   dat_ctrl <- filter(dat_for_imp, trt == 0)
   dat_trt <- filter(dat_for_imp, trt == 1)
   
+  # Impute treatment and control separately
   imp_ctrl <- 
     suppressWarnings(mice(dat_ctrl, m = m, maxit = iter, printFlag = FALSE))
   imp_trt <- 
     suppressWarnings(mice(dat_trt, m = m, maxit = iter, printFlag = FALSE))
+  # Combine imputed treatment and control groups
   imp_all <- rbind(imp_trt, imp_ctrl)
+  # Convert imputed data to a single long-form data form
   imp_all_df <- complete(imp_all, action = "long", include = FALSE) %>%
     mutate(dose_binary = as.numeric(as.character(dose_binary)))
 
+  # Run estimators on imputed data
   estimators %>%
     rowwise(estimator_name) %>%
     reframe(run_estimator_mi(imp_all_df, estimator_fn))
 }
 
-missingness_mi_continuous <- function(dat, estimators, m = 50, iter = 10) {
-  dat_for_imp <- dat %>%
-    select(trt, aux, confounder, dose, outcome, compliance_threshold)
-  dat_ctrl <- filter(dat_for_imp, trt == 0)
-  dat_trt <- filter(dat_for_imp, trt == 1)
-  
-  imp_ctrl <- 
-    suppressWarnings(mice(dat_ctrl, m = m, maxit = iter, printFlag = FALSE))
-  imp_trt <- 
-    suppressWarnings(mice(dat_trt, m = m, maxit = iter, printFlag = FALSE))
-  imp_all <- rbind(imp_trt, imp_ctrl)
-  imp_all_df <- complete(imp_all, action = "long", include = FALSE) %>%
-   mutate(dose_binary = as.numeric(dose >= compliance_threshold))
-  
-  estimators %>%
-    rowwise(estimator_name) %>%
-    reframe(run_estimator_mi(imp_all_df, estimator_fn))
-}
-
+# Inverse probability weighting for missing data
 missingness_ipw <- function(dat, estimators) {
   dat <- dat %>%
     mutate(complete_case = !is.na(dose) & !is.na(outcome))
   weights_model <- glm(
-    complete_case ~ trt*aux + trt*confounder,
+    complete_case ~ trt*aux + trt*outcome,
     family = binomial,
     data = dat
   )
@@ -91,7 +80,6 @@ missingness_ipw <- function(dat, estimators) {
 missingness_methods <- tribble(
   ~missingness_name, ~missingness_fn,
   "cc", missingness_cc,
-  "mi_binary", missingness_mi_binary,
-  "mi_continuous", missingness_mi_continuous,
+  "mi", missingness_mi_binary,
   "ipw", missingness_ipw,
 )
