@@ -19,59 +19,11 @@ get_compliance_intercept <- function(mu, b_aux, b_confounder, n.mc = 1e6) {
   res$par
 }
 
-logit_sigmoid <- function(x, location = 0, shape = 1) {
-  xx <- 2 * x - 1
-  y <- plogis((xx - location) * shape)
-  (y - plogis((-1 - location) * shape)) / 
-    (plogis((1 - location) * shape) - plogis((-1 - location) * shape))
-}
-
-get_sigmoid_params <- function(x1, y1, x2, y2) {
-  res <- optim(
-    par = c(location = 0, shape = 1),
-    fn = function(par) {
-      sum(c(logit_sigmoid(x1, par[1], par[2]) - y1,
-            logit_sigmoid(x2, par[1], par[2]) - y2)^2)
-    }
-  )
-  if (res$convergence != 0) {
-    print(res)
-    stop("failed to converge")
-  }
-  res$par
-}
-
-inv_pbeta <- function(p, q, shape) {
-  res <- optimize(
-    function(x) {
-      (pbeta(q, x*shape, (1-x)*shape) - (1 - p))^2
-    },
-    interval = c(1e-8, 1 - 1e-8)
-  )
-  res$minimum
-}
-
-get_compliance_mu <- function(compliance_model, linpred, shape, threshold) {
-  if (compliance_model == "betareg") {
-    plogis(linpred)
-  } else if (compliance_model == "logistic") {
-    map_dbl(plogis(linpred), \(x) inv_pbeta(x, threshold, shape))
-  } else {
-    stop("compliance_model must be 'betareg' or 'logistic'")
-  }
-}
-
 generate_complete_df <- function(
     n,
-    compliance_model,
     compliance_intercept,
     compliance_b_confounder,
     compliance_b_aux,
-    compliance_shape,
-    compliance_threshold,
-    dose_response_model,
-    dose_response_location,
-    dose_response_shape,
     outcome_b_response,
     outcome_b_confounder,
     trt_split = 0.5
@@ -86,47 +38,23 @@ generate_complete_df <- function(
     # confounder: N(0, 1)
     confounder = rnorm(n, 0, 1),
     # mean of compliance variable
-    compliance_mu = get_compliance_mu(
-      compliance_model,
+    compliance_prob = plogis(
       compliance_intercept +
         compliance_b_confounder * confounder +
-        compliance_b_aux * aux,
-      compliance_shape,
-      compliance_threshold
+        compliance_b_aux * aux
     ),
-    # latent compliance (0 to 1). convert between parameterisations of beta
-    # distribution using: alpha = mu*nu, beta = (1-mu)*nu
-    compliance = rbeta(
-      n,
-      compliance_mu * compliance_shape,
-      (1 - compliance_mu) * compliance_shape
-    ),
-    compliance_threshold = compliance_threshold,
-    # binary compliance: always 1 for control group; otherwise 0 if below
-    # threshold and 1 if at/above threshold
+    # latent compliance (0 or 1): would this person comply with the intervention
+    # if assigned to it
+    compliance = rbinom(n, 1, compliance_prob),
+    # binary compliance: always 1 for control group; otherwise latent compliance
     compliance_binary =
-      as.numeric(if_else(trt == 1, compliance >= compliance_threshold, TRUE)),
-    # dose received (0 to 1): 0 for control group, compliance for trt group
-    dose = if_else(trt == 1, compliance, 0),
-    # binary dose: always 0 for control group; otherwise 0 if below threshold
-    # and 1 if at/above threshold
+      as.numeric(if_else(trt == 1, compliance == 1, TRUE)),
+    # dose received (0 or 1): 0 for control group, compliance for trt group
     dose_binary = if_else(trt == 1, compliance_binary, 0),
-    # response (0 to 1) - either linear or nonlinear w.r.t dose
-    response = 
-      if (dose_response_model == "linear") {
-        dose
-      } else if (dose_response_model == "nonlinear") {
-        logit_sigmoid(dose, location = dose_response_location,
-                      shape = dose_response_shape)
-      } else if (dose_response_model == "step") {
-        as.numeric(dose >= compliance_threshold)
-      } else {
-        stop("dose response model must be 'linear', 'nonlinear', or 'step'")
-      },
     # mean of the outcome variable: 
-    #  b1 * response + b2 * confounder
+    #  b1 * dose + b2 * confounder
     outcome_mu = 
-      outcome_b_response * response + outcome_b_confounder * confounder,
+      outcome_b_response * dose_binary + outcome_b_confounder * confounder,
     # outcome: drawn from a normal distribution
     outcome = rnorm(n, outcome_mu, 1),
   )
@@ -159,14 +87,6 @@ get_outcome_b_response <- function(args, power, interval = c(0, 2),
   )
   res$minimum
 }
-
-get_true_effect <- function(args, n.mc = 1e6) {
-  args$n <- n.mc
-  dat <- do.call(generate_complete_df, args)
-  mean_response <- tapply(dat$response, dat$dose_binary, mean)
-  args$outcome_b_response * (mean_response[2] - mean_response[1])
-}
-
 
 add_missingness_mar <- function(
     df,
