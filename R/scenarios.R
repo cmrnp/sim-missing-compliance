@@ -3,10 +3,8 @@ get_scenario_list <- function() {
   expand_grid(
     treatment_effect = c(
       "null",
-      "high_compliance_linear",
-      "high_compliance_step",
-      "low_compliance_linear",
-      "low_compliance_step"
+      "high_compliance",
+      "low_compliance"
     ),
     sample_size = c("small", "large"),
     missingness_mechanism = c("none", "mcar", "mar_weak", "mar_strong"),
@@ -19,9 +17,6 @@ get_scenario_list <- function() {
       compliance = 
         if_else(str_detect(treatment_effect, "high_compliance"), 
                 "high", "low"),
-      dose_response = 
-        if_else(str_detect(treatment_effect, "_step"),
-                "step", "linear"),
     ) %>%
     mutate(
       scenario_name = glue(
@@ -37,7 +32,7 @@ scenario_list <- get_scenario_list()
 get_dgp_params <- function(scenarios) {
   dgp_params <-
     scenarios %>%
-    distinct(sample_size, null, compliance, dose_response) %>%
+    distinct(sample_size, null, compliance) %>%
     mutate(
       # sample size
       n = case_when(
@@ -46,42 +41,31 @@ get_dgp_params <- function(scenarios) {
       ),
       
       # compliance
-      compliance_model = "logistic",
-      compliance_intercept = case_when(
-        compliance == "low" ~ get_compliance_intercept(0.5, 0.5, 0.5),
-        compliance == "high" ~ get_compliance_intercept(0.8, 0.5, 0.5)
+      compliance_prop = case_when(
+        compliance == "low" ~ 0.5,
+        compliance == "high" ~ 0.8,
       ),
       compliance_b_confounder = 0.5,
       compliance_b_aux = 0.5,
-      compliance_shape = case_when(
-        compliance == "low" ~ 5,
-        compliance == "high" ~ 15,
-      ),
-      compliance_threshold = 0.8,
-      
-      # dose-response
-      dose_response_model = dose_response,
-      dose_response_location = get_sigmoid_params(0.5, 0.2, 0.8, 0.9)["location"],
-      dose_response_shape = get_sigmoid_params(0.5, 0.2, 0.8, 0.9)["shape"],
-      
+      compliance_intercept = 
+        get_compliance_intercept(compliance_prop, compliance_b_aux,
+                                 compliance_b_confounder),
+
       # outcome regression
       outcome_b_confounder = 0.5
     ) %>%
-    rowwise(n, starts_with("compliance_"), starts_with("dose_response_"),
-            outcome_b_confounder) %>%
+    rowwise() %>%
     mutate(
       outcome_b_response = 
         case_when(
           null ~ 0,
-          TRUE ~ get_outcome_b_response(cur_group(), power = 0.8)
-        )
+          TRUE ~ pwr.t.test(n = n, power = 0.8)$d / compliance_prop,
+        ),
     ) %>%
-    rowwise(n, starts_with("compliance_"), starts_with("dose_response_"),
-            starts_with("outcome_")) %>%
+    ungroup() %>%
     mutate(
-      true_effect = get_true_effect(cur_group())
-    ) %>%
-    ungroup()
+      true_effect = outcome_b_response
+    )
 }
 
 get_scenario_params <- function(scenarios, dgp_params) {
