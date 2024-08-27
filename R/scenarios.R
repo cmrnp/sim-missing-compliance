@@ -62,7 +62,7 @@ get_dgp_params <- function(scenarios) {
       outcome_b_response = 
         case_when(
           null ~ 0,
-          TRUE ~ pwr.t.test(n = n, power = 0.8)$d / compliance_prop,
+          TRUE ~ pwr.t.test(n = n / 2, power = 0.8)$d / compliance_prop,
         ),
     ) %>%
     ungroup() %>%
