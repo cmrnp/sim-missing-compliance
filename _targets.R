@@ -15,6 +15,7 @@ if (Sys.info()["nodename"] == "dev2") {
       name = "misscompl",
       workers = 120,
       pbs_walltime_hours = 12,
+      pbs_memory_gigabytes_required = 2,
       script_lines = "
 #PBS -q batch
 #PBS -A cebu
