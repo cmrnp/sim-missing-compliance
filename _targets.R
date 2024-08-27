@@ -12,8 +12,9 @@ tar_option_set(
 if (Sys.info()["nodename"] == "dev2") {
   tar_option_set(
     controller = crew_controller_pbs(
-      workers = 144,
-      pbs_walltime_hours = 168,
+      name = "misscompl",
+      workers = 120,
+      pbs_walltime_hours = 12,
       script_lines = "
 #PBS -q batch
 #PBS -A cebu
