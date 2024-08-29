@@ -14,7 +14,7 @@ if (Sys.info()["nodename"] == "dev2") {
     controller = crew_controller_pbs(
       name = "misscompl",
       workers = 120,
-      pbs_walltime_hours = 12,
+      pbs_walltime_hours = 24,
       pbs_memory_gigabytes_required = 2,
       script_lines = "
 #PBS -q batch
@@ -43,7 +43,7 @@ list(
       #       missingness_mechanism %in% c("none", "mar_strong")) %>%
       select(name = scenario_name),
     names = any_of("name"),
-    batches = 20,
+    batches = 100,
     reps = 100,
     combine = TRUE,
   ),
