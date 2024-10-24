@@ -54,7 +54,7 @@ list(
   # Plot results for no-missing-data scenarios
   tar_target(
     save_results_no_missing,
-    save_plot_results_no_missing(plot_results_no_missing),
+    save_plot_results_no_missing(sim_reps_summary),
     format = "file"
   ),
 
