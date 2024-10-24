@@ -4,8 +4,8 @@ source(here("functions.R"))
 
 # Set overall targets options
 tar_option_set(
-  seed = 202408,
-  # error = "null"
+  seed = 202410,
+  format = "parquet",
 )
 
 # Set parallel options depending on hostname
@@ -19,7 +19,7 @@ if (Sys.info()["nodename"] == "dev2") {
       script_lines = "
 #PBS -q batch
 #PBS -A cebu
-module load R/4.3.2
+module load R/4.4.1-openblas
 "
     )
   )
@@ -35,7 +35,7 @@ list(
   tar_target(scenario_params, get_scenario_params(scenario_list, dgp_params)),
   tar_map_rep(
     sim_reps,
-    command = 
+    command =
       run_scenario(filter(scenario_params, scenario_name == name)),
     values = scenario_list %>%
       #filter(missingness_mechanism == "none") %>%
@@ -47,29 +47,21 @@ list(
     reps = 100,
     combine = TRUE,
   ),
-  
+
   # Generate summary data frame of indiviudal replicate results
   tar_target(sim_reps_summary, summarise_sim_reps(sim_reps)),
-  
+
   # Plot results for no-missing-data scenarios
   tar_target(
-    plot_results_no_missing, 
-    make_plot_results_no_missing(sim_reps_summary)
-  ),
-  tar_target(
-    save_results_no_missing, 
-    save_plot_results_no_missing(plot_results_no_missing), 
+    save_results_no_missing,
+    save_plot_results_no_missing(plot_results_no_missing),
     format = "file"
   ),
 
-  # null treatment effect
+  # Plot results with null treatment effect
   tar_target(
-    plot_results_null, 
-    make_plot_results_null(sim_reps_summary), 
-  ),
-  tar_target(
-    save_results_null, 
-    save_plot_results_null(plot_results_null), 
+    save_results_null,
+    save_plot_results_null(sim_reps_summary),
     format = "file"
   ),
   
@@ -77,17 +69,15 @@ list(
   tar_map(
     expand_grid(
       sample_size = c("small", "large"),
-      outcome_missingness = c("no", "yes"),
+      outcome_missingness = c("no"),
     ),
     
     # non-null treatment effect
     tar_target(
-      plot_results_main, 
-      make_plot_results_main(sim_reps_summary, outcome_missingness, sample_size),
-    ),
-    tar_target(
-      save_results_main, 
-      save_plot_results_main(plot_results_main, outcome_missingness, sample_size), 
+      save_results_main,
+      save_plot_results_main(
+        sim_reps_summary, outcome_missingness, sample_size
+      ),
       format = "file"
     )
   )

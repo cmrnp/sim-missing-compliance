@@ -8,7 +8,7 @@ get_scenario_list <- function() {
     ),
     sample_size = c("small", "large"),
     missingness_mechanism = c("none", "mcar", "mar_weak", "mar_strong"),
-    outcome_missingness = c("no", "yes"),
+    outcome_missingness = c("no"),
   ) %>%
     filter(!(missingness_mechanism == "none" & 
                outcome_missingness == "yes")) %>%

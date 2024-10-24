@@ -142,7 +142,8 @@ make_plot_results_no_missing <- function(sim_reps_summary) {
 }
 
 # Save plot of results for no-missing-data scenarios
-save_plot_results_no_missing <- function(p) {
+save_plot_results_no_missing <- function(sim_reps_summary) {
+  p <- make_plot_results_no_missing(sim_reps_summary)
   ggsave(
     here("plots", "no_missing.png"),
     plot = p,
@@ -217,8 +218,9 @@ make_plot_results_null <- function(sim_reps_summary) {
 
 # Save plots of results for null scenarios
 save_plot_results_null <- function(
-    plot_list, outcome_missingness_, sample_size_
+    sim_reps_summary, outcome_missingness_, sample_size_
 ) {
+  plot_list <- make_plot_results_null(sim_reps_summary, outcome_missingness_, sample_size_)
   c(
     ggsave(
       here("plots", glue("null_bias.png")),
@@ -274,8 +276,9 @@ make_plot_results_main <- function(
 
 # Save plots for scenarios with missing data and non-null treatment effects
 save_plot_results_main <- function(
-    plot_list, outcome_missingness_, sample_size_
+    sim_reps_summary, outcome_missingness_, sample_size_
 ) {
+  plot_list <- make_plot_results_main(sim_reps_summary, outcome_missingness_, sample_size_)
   c(
     ggsave(
       here("plots", glue("main_bias_{sample_size_}_{outcome_missingness_}.png")),
