@@ -217,10 +217,8 @@ make_plot_results_null <- function(sim_reps_summary) {
 }
 
 # Save plots of results for null scenarios
-save_plot_results_null <- function(
-    sim_reps_summary, outcome_missingness_, sample_size_
-) {
-  plot_list <- make_plot_results_null(sim_reps_summary, outcome_missingness_, sample_size_)
+save_plot_results_null <- function(sim_reps_summary) {
+  plot_list <- make_plot_results_null(sim_reps_summary)
   c(
     ggsave(
       here("plots", glue("null_bias.png")),
