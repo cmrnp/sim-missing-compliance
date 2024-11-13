@@ -3,8 +3,11 @@ get_scenario_list <- function() {
   expand_grid(
     treatment_effect = c(
       "null",
-      "high_compliance",
-      "low_compliance"
+      "power80"
+    ),
+    compliance = c(
+      "high",
+      "low"
     ),
     sample_size = c("small", "large"),
     missingness_mechanism = c("none", "mcar", "mar_weak", "mar_strong"),
@@ -14,14 +17,11 @@ get_scenario_list <- function() {
                outcome_missingness == "yes")) %>%
     mutate(
       null = str_detect(treatment_effect, "null"),
-      compliance = 
-        if_else(str_detect(treatment_effect, "high_compliance"), 
-                "high", "low"),
     ) %>%
     mutate(
       scenario_name = glue(
-        "{treatment_effect}_{sample_size}_",
-        "{missingness_mechanism}_{outcome_missingness}"
+        "{treatment_effect}_{compliance}_{sample_size}_",
+        "{missingness_mechanism}"
       ),
       .before = 1
     )
@@ -35,31 +35,36 @@ get_dgp_params <- function(scenarios) {
     mutate(
       # sample size
       n = case_when(
-        sample_size == "small" ~ 200,
+        sample_size == "small" ~ 100,
         sample_size == "large" ~ 1000,
       ),
-      
+
+      p_aux = 0.5,
+      p_confounder = 0.25,
+
       # compliance
       compliance_prop = case_when(
-        compliance == "low" ~ 0.5,
+        compliance == "low" ~ 0.4,
         compliance == "high" ~ 0.8,
       ),
-      compliance_b_confounder = 0.5,
-      compliance_b_aux = 0.5,
+      compliance_b_confounder = log(0.6),
+      compliance_b_aux = log(1.25),
 
       # outcome regression
-      outcome_b_confounder = 0.5
+      outcome_b_confounder = -0.5
     ) %>%
     group_by(compliance) %>%
     mutate(
       compliance_intercept = 
-        get_compliance_intercept(first(compliance_prop),
-                                 first(compliance_b_aux),
-                                 first(compliance_b_confounder)),
+        get_compliance_intercept(
+          first(compliance_prop),
+          first(compliance_b_aux), first(p_aux),
+          first(compliance_b_confounder), first(p_confounder)
+        ),
     ) %>%
     rowwise() %>%
     mutate(
-      outcome_b_response = 
+      outcome_b_response =
         case_when(
           null ~ 0,
           TRUE ~ pwr.t.test(n = n / 2, power = 0.8)$d / compliance_prop,
@@ -78,13 +83,13 @@ get_scenario_params <- function(scenarios, dgp_params) {
       # missingness parameters, exc. intercept
       miss_compliance_enabled = missingness_mechanism != "none",
       miss_compliance_b_aux = case_when(
-        missingness_mechanism == "mar_weak" ~ 0.2,
-        missingness_mechanism == "mar_strong" ~ 0.5,
+        missingness_mechanism == "mar_weak" ~ log(0.8),
+        missingness_mechanism == "mar_strong" ~ log(0.6),
         .default = 0.0
       ),
       miss_compliance_b_outcome = case_when(
-        missingness_mechanism == "mar_weak" ~ -0.2,
-        missingness_mechanism == "mar_strong" ~ -0.5,
+        missingness_mechanism == "mar_weak" ~ log(0.9),
+        missingness_mechanism == "mar_strong" ~ log(0.8),
         .default = 0.0
       ),
       
@@ -96,21 +101,21 @@ get_scenario_params <- function(scenarios, dgp_params) {
         .default = 0.0
       ),
       miss_outcome_b_confounder = case_when(
-        missingness_mechanism == "mar_weak" ~ -0.2,
-        missingness_mechanism == "mar_strong" ~ -0.5,
+        missingness_mechanism == "mar_weak" ~ 0.2,
+        missingness_mechanism == "mar_strong" ~ 0.5,
         .default = 0.0
       ),
     ) %>%
     rowwise(everything()) %>%
     summarise(
-      miss_compliance_intercept = 
+      miss_compliance_intercept =
         get_mar_compliance_intercept(cur_group(),
                                      prop_missing_compliance = 0.3)
     ) %>%
     ungroup() %>%
     rowwise(everything()) %>%
     summarise(
-      miss_outcome_intercept = 
+      miss_outcome_intercept =
         get_mar_outcome_intercept(cur_group(),
                                   prop_missing_outcome = 0.3)
     ) %>%

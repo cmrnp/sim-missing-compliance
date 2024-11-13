@@ -1,11 +1,14 @@
 
 
-get_compliance_intercept <- function(mu, b_aux, b_confounder, n.mc = 1e6) {
+get_compliance_intercept <- function(
+  mu, b_aux, p_aux, b_confounder, p_confounder, n.mc = 1e6
+) {
   res <- optim(
     par = c(intercept = qlogis(mu)),
     fn = function(intercept) {
-      (mean(plogis(rnorm(n.mc, intercept, sqrt(b_aux^2 + b_confounder^2)))) -
-         mu)^2
+      (mean(plogis(
+        intercept + rbinom(n.mc, 1, p_aux) + rbinom(n.mc, 1, p_confounder)
+      )) - mu)^2
     },
     method = "Brent",
     lower = -10,
@@ -21,6 +24,8 @@ get_compliance_intercept <- function(mu, b_aux, b_confounder, n.mc = 1e6) {
 
 generate_complete_df <- function(
     n,
+    p_aux,
+    p_confounder,
     compliance_intercept,
     compliance_b_confounder,
     compliance_b_aux,
@@ -33,10 +38,10 @@ generate_complete_df <- function(
   tibble(
     # trt: 0 = control, 1 = treatment
     trt = c(rep(1, n_trt), rep(0, n_ctrl)),
-    # auxiliary variable: N(0, 1)
-    aux = rnorm(n, 0, 1),
-    # confounder: N(0, 1)
-    confounder = rnorm(n, 0, 1),
+    # auxiliary variable: Bern(p_aux)
+    aux = rbinom(n, 1, p_aux),
+    # confounder variable: Bern(p_confounder)
+    confounder = rbinom(n, 1, p_confounder),
     # mean of compliance variable
     compliance_prob = plogis(
       compliance_intercept +
@@ -51,9 +56,9 @@ generate_complete_df <- function(
       as.numeric(if_else(trt == 1, compliance == 1, TRUE)),
     # dose received (0 or 1): 0 for control group, compliance for trt group
     dose_binary = if_else(trt == 1, compliance_binary, 0),
-    # mean of the outcome variable: 
+    # mean of the outcome variable:
     #  b1 * dose + b2 * confounder
-    outcome_mu = 
+    outcome_mu =
       outcome_b_response * dose_binary + outcome_b_confounder * confounder,
     # outcome: drawn from a normal distribution
     outcome = rnorm(n, outcome_mu, 1),
@@ -100,17 +105,19 @@ add_missingness_mar <- function(
 
 generate_scenario_data <- function(scenario_params) {
   stopifnot(nrow(scenario_params) == 1)
-  
+
   # generate complete dataset, i.e. no missingness yet
   complete_dat <- generate_complete_df(
     n = scenario_params$n,
+    p_aux = scenario_params$p_aux,
+    p_confounder = scenario_params$p_confounder,
     compliance_intercept = scenario_params$compliance_intercept,
     compliance_b_confounder = scenario_params$compliance_b_confounder,
     compliance_b_aux = scenario_params$compliance_b_aux,
     outcome_b_response = scenario_params$outcome_b_response,
     outcome_b_confounder = scenario_params$outcome_b_confounder
   )
-  
+
   # add missingness according to missingness parameters
   dat <- add_missingness_mar(
     complete_dat,
@@ -123,25 +130,28 @@ generate_scenario_data <- function(scenario_params) {
     miss_outcome_b_aux = scenario_params$miss_outcome_b_aux,
     miss_outcome_b_confounder = scenario_params$miss_outcome_b_confounder
   )
-  
+
   dat
 }
 
 get_mar_compliance_intercept <- function(
-    args, prop_missing_compliance,
-    n.mc = 1e6, verbose = FALSE, interval = c(-5, 5)
+  args, prop_missing_compliance,
+  n.mc = 1e6, verbose = FALSE, interval = c(-5, 5)
 ) {
   if (!args$miss_compliance_enabled) {
     return(0)
   }
-  
+  if (args$miss_compliance_b_aux == 0 && args$miss_compliance_b_outcome == 0) {
+    return(qlogis(prop_missing_compliance))
+  }
+
   args$miss_outcome_enabled <- FALSE
   args$miss_outcome_intercept <- 0
   args$miss_outcome_b_aux <- 0
   args$miss_outcome_b_confounder <- 0
-  
+
   args$n <- n.mc
-  
+
   res <- optimize(
     f = function(par) {
       call_args <- args
@@ -163,15 +173,15 @@ get_mar_compliance_intercept <- function(
 }
 
 get_mar_outcome_intercept <- function(
-    args, prop_missing_outcome,
-    n.mc = 1e6, verbose = FALSE, interval = c(-5, 5)
+  args, prop_missing_outcome,
+  n.mc = 1e6, verbose = FALSE, interval = c(-5, 5)
 ) {
   if (!args$miss_outcome_enabled) {
     return(0)
   }
 
   args$n <- n.mc
-  
+
   res <- optimize(
     f = function(par) {
       call_args <- args
