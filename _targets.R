@@ -4,8 +4,9 @@ source(here("functions.R"))
 
 # Set overall targets options
 tar_option_set(
-  seed = 202410,
+  seed = 202411,
   format = "parquet",
+  error = "null",
 )
 
 # Set parallel options depending on hostname
@@ -13,7 +14,7 @@ if (Sys.info()["nodename"] == "dev2") {
   tar_option_set(
     controller = crew_controller_pbs(
       name = "misscompl",
-      workers = 120,
+      workers = 160,
       pbs_walltime_hours = 24,
       pbs_memory_gigabytes_required = 2,
       script_lines = "
@@ -31,16 +32,22 @@ module load R/4.4.1-openblas
 
 # Define targets
 list(
-  tar_target(dgp_params, get_dgp_params(scenario_list)),
-  tar_target(scenario_params, get_scenario_params(scenario_list, dgp_params)),
+  tar_target(
+    dgp_params,
+    get_dgp_params(scenario_list),
+    deployment = "main"
+  ),
+  tar_target(
+    scenario_params,
+    get_scenario_params(scenario_list, dgp_params),
+    deployment = "main"
+  ),
+
   tar_map_rep(
     sim_reps,
     command =
       run_scenario(filter(scenario_params, scenario_name == name)),
     values = scenario_list %>%
-      #filter(missingness_mechanism == "none") %>%
-      #filter(outcome_missingness == "no", sample_size == "small",
-      #       missingness_mechanism %in% c("none", "mar_strong")) %>%
       select(name = scenario_name),
     names = any_of("name"),
     batches = 100,
@@ -49,6 +56,10 @@ list(
   ),
 
   # Generate summary data frame of indiviudal replicate results
-  tar_target(sim_reps_summary, summarise_sim_reps(sim_reps))
+  tar_target(
+    sim_reps_summary,
+    summarise_sim_reps(sim_reps),
+    deployment = "main"
+  )
 
 )
