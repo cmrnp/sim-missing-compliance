@@ -52,6 +52,13 @@ missingness_mi_binary <- function(dat, estimators, m = 50, iter = 10) {
   imp_all_df <- complete(imp_all, action = "long", include = FALSE) %>%
     mutate(dose_binary = as.numeric(as.character(dose_binary)))
 
+  # Sanity check: abort if there is any missing data in the imputed output.
+  # This can happen if there is no within-strata variability in the input (!)
+  # and mice just gives up (!!).
+  if (any(is.na(imp_all_df$dose_binary)) || any(is.na(imp_all_df$outcome))) {
+    return(tibble())
+  }
+
   # Run estimators on imputed data
   estimators %>%
     rowwise(estimator_name) %>%
