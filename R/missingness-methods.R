@@ -26,7 +26,7 @@ run_estimator_mi <- function(imp_all_df, estimator) {
 }
 
 # Multiple imputation of binary compliance measure
-missingness_mi_binary <- function(dat, estimators, m = 50, iter = 10) {
+missingness_mi_binary <- function(dat, estimators, m = 50, iter = 1) {
   dat_for_imp <- dat %>%
     select(trt, aux, confounder, dose_binary, outcome) %>%
     mutate(dose_binary = as.factor(dose_binary))
