@@ -26,7 +26,7 @@ run_estimator_mi <- function(imp_all_df, estimator) {
 }
 
 # Multiple imputation of binary compliance measure
-missingness_mi_binary <- function(dat, estimators, m = 50, iter = 1) {
+missingness_mi_binary <- function(dat, estimators, method, m = 50, iter = 1) {
   dat_for_imp <- dat %>%
     select(trt, aux, confounder, dose_binary, outcome) %>%
     mutate(dose_binary = as.factor(dose_binary))
@@ -42,10 +42,16 @@ missingness_mi_binary <- function(dat, estimators, m = 50, iter = 1) {
   dat_trt <- filter(dat_for_imp, trt == 1)
   
   # Impute treatment and control separately
-  imp_ctrl <- 
-    suppressWarnings(mice(dat_ctrl, m = m, maxit = iter, printFlag = FALSE))
-  imp_trt <- 
-    suppressWarnings(mice(dat_trt, m = m, maxit = iter, printFlag = FALSE))
+  imp_ctrl <-
+    suppressWarnings(mice(
+      dat_ctrl, m = m, method = method,
+      maxit = iter, printFlag = FALSE
+    ))
+  imp_trt <-
+    suppressWarnings(mice(
+      dat_trt, m = m, method = method,
+      maxit = iter, printFlag = FALSE
+    ))
   # Combine imputed treatment and control groups
   imp_all <- rbind(imp_trt, imp_ctrl)
   # Convert imputed data to a single long-form data form
@@ -87,6 +93,8 @@ missingness_ipw <- function(dat, estimators) {
 missingness_methods <- tribble(
   ~missingness_name, ~missingness_fn,
   "cc", missingness_cc,
-  "mi", missingness_mi_binary,
+  "mi_logreg", \(d, e) missingness_mi_binary(d, e, method = "logreg"),
+  "mi_logreg_boot", \(d, e) missingness_mi_binary(d, e, method = "logreg.boot"),
+  "mi_pmm", \(d, e) missingness_mi_binary(d, e, method = "pmm"),
   "ipw", missingness_ipw,
 )
