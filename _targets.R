@@ -10,18 +10,20 @@ tar_option_set(
 )
 
 # Set parallel options depending on hostname
-if (Sys.info()["nodename"] == "dev2") {
+if (Sys.info()["nodename"] == "login001.meerkat.mcri.edu.au") {
   tar_option_set(
-    controller = crew_controller_pbs(
+    controller = crew_controller_slurm(
       name = "misscompl",
       workers = 160,
-      pbs_walltime_hours = 24,
-      pbs_memory_gigabytes_required = 2,
-      script_lines = "
-#PBS -q batch
-#PBS -A cebu
-module load R/4.4.1-openblas
+      options_cluster = crew_options_slurm(
+        memory_gigabytes_required = 2,
+        time_minutes = 24 * 60,
+        partition = "prod_med",
+        script_lines = "
+#SBATCH --account=cebu
+module load r/4.4.1
 "
+      )
     )
   )
 } else {
@@ -29,6 +31,14 @@ module load R/4.4.1-openblas
     controller = crew_controller_local(workers = 4)
   )
 }
+
+# for a subset of scenarios:
+# scenario_list <- scenario_list %>%
+#   filter(
+#     missingness_mechanism == "mar_strong",
+#     sample_size == "large",
+#     treatment_effect == "power80"
+#   )
 
 # Define targets
 list(
