@@ -16,7 +16,7 @@ if (Sys.info()["nodename"] == "login001.meerkat.mcri.edu.au") {
       name = "misscompl",
       workers = 160,
       options_cluster = crew_options_slurm(
-        memory_gigabytes_required = 2,
+        memory_gigabytes_required = 8,
         time_minutes = 24 * 60,
         partition = "prod_med",
         script_lines = "
