@@ -168,7 +168,6 @@ get_mar_compliance_intercept <- function(
     interval = interval,
     tol = 1 / sqrt(n.mc)
   )
-  cat("miss_compliance_intercept =", res$minimum, "\n")
   res$minimum
 }
 
