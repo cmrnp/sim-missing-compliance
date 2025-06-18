@@ -14,7 +14,7 @@ if (Sys.info()["nodename"] == "login001.meerkat.mcri.edu.au") {
   tar_option_set(
     controller = crew_controller_slurm(
       name = "misscompl",
-      workers = 160,
+      workers = 320,
       options_cluster = crew_options_slurm(
         memory_gigabytes_required = 8,
         time_minutes = 24 * 60,
