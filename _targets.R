@@ -5,7 +5,7 @@ source(here("functions.R"))
 # Set overall targets options
 tar_option_set(
   seed = 202411,
-  format = tar_format_nanoparquet(),
+  format = "parquet",
   error = "null",
 )
 

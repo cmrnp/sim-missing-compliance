@@ -1,2 +1,2 @@
 library(languageserver)
-library(nanoparquet)
+library(arrow)
