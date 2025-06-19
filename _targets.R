@@ -50,11 +50,8 @@ sim_reps_target <-
     names = any_of("name"),
     batches = 100,
     reps = 100,
-    combine = TRUE,
+    combine = FALSE,
   )
-# combining targets should take place on head node as it will exceed
-# RAM restrictions specified for batch jobs:
-sim_reps_target$combine$settings$deployment <- "main"
 
 # Define targets
 list(
@@ -68,6 +65,15 @@ list(
   ),
 
   sim_reps_target,
+
+  # combining targets should take place on head node as it will exceed
+  # RAM restrictions specified for batch jobs:
+  tar_combine(
+    sim_reps,
+    sim_reps_target$static_branches,
+    command = dplyr::bind_rows(!!!.x),
+    deployment = "main"
+  ),
 
   # Generate summary data frame of indiviudal replicate results
   tar_target(
