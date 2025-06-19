@@ -4,7 +4,7 @@ source(here("functions.R"))
 
 # Set overall targets options
 tar_option_set(
-  seed = 202411,
+  seed = 202506,
   format = "parquet",
   error = "null",
 )
