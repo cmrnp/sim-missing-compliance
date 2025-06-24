@@ -21,7 +21,6 @@ if (Sys.info()["nodename"] == "login001.meerkat.mcri.edu.au") {
         partition = "prod_med,prod_long",
         script_lines = "
 #SBATCH --account=cebu
-module load r/4.4.1
 "
       )
     )
