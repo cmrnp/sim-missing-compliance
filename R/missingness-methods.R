@@ -158,7 +158,6 @@ missingness_methods <- tribble(
   ~missingness_name, ~missingness_fn,
   "cc", missingness_cc,
   "mi_logreg", \(d, e) missingness_mi_binary(d, e, method = "logreg"),
-  "mi_logreg_boot", \(d, e) missingness_mi_binary(d, e, method = "logreg.boot"),
   "mi_pmm", \(d, e) missingness_mi_binary(d, e, method = "pmm"),
   "smcfcs", missingness_mi_smcfcs,
   "ipw", missingness_ipw,
