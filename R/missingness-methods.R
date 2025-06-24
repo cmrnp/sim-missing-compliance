@@ -18,7 +18,7 @@ run_estimator_mi <- function(imp_all_df, estimator) {
                         n = rows, k = rows - first(imp_results$df))
   tibble(
     estimate = pooled$qbar,
-    std.error = sqrt(pooled$ubar),
+    std.error = sqrt(pooled$t),
     conf.low = estimate - qt(0.975, pooled$df)*std.error,
     conf.high = estimate + qt(0.975, pooled$df)*std.error,
     df = pooled$df
