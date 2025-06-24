@@ -33,13 +33,13 @@ module load r/4.4.1
 }
 
 # for a subset of scenarios:
-scenario_list <- scenario_list %>%
-  filter(
-    missingness_mechanism == "mcar",
-    sample_size == "large",
-    treatment_effect == "power80",
-    compliance == "low"
-  )
+# scenario_list <- scenario_list %>%
+#   filter(
+#     missingness_mechanism == "mcar",
+#     sample_size == "large",
+#     treatment_effect == "power80",
+#     compliance == "low"
+#   )
 
 sim_reps_target <-
   tar_map_rep(
