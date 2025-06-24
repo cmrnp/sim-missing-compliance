@@ -21,7 +21,6 @@ if (Sys.info()["nodename"] == "login001.meerkat.mcri.edu.au") {
         partition = "prod_med,prod_long",
         script_lines = "
 #SBATCH --account=cebu
-module load r/4.4.1
 "
       )
     )
@@ -35,9 +34,10 @@ module load r/4.4.1
 # for a subset of scenarios:
 # scenario_list <- scenario_list %>%
 #   filter(
-#     missingness_mechanism == "mar_strong",
+#     missingness_mechanism == "mcar",
 #     sample_size == "large",
-#     treatment_effect == "power80"
+#     treatment_effect == "power80",
+#     compliance == "low"
 #   )
 
 sim_reps_target <-

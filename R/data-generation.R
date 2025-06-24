@@ -7,7 +7,7 @@ get_compliance_intercept <- function(
     par = c(intercept = qlogis(mu)),
     fn = function(intercept) {
       (mean(plogis(
-        intercept + rbinom(n.mc, 1, p_aux) + rbinom(n.mc, 1, p_confounder)
+        intercept + b_aux*rbinom(n.mc, 1, p_aux) + b_confounder*rbinom(n.mc, 1, p_confounder)
       )) - mu)^2
     },
     method = "Brent",

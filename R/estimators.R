@@ -115,11 +115,33 @@ estimator_ivreg <- function(dat, weights = NULL) {
     mutate(df = df)
 }
 
+# Regression estimator: fit model to treatment and confounder,
+# no interaction term.
+# Uses HC2 standard errors if weights are applied
+estimator_regression <- function(dat, weights = NULL) {
+  if (is.null(weights)) {
+    se_type <- "classical"
+  } else {
+    se_type <- "HC2"
+  }
+  m <- lm_robust(
+    outcome ~ dose_binary + confounder,
+    weights = weights, data = dat,
+    se_type = se_type
+  )
+  # Extract coefficient for treatment received
+  tidy(m) %>%
+    filter(term == "dose_binary") %>%
+    as_tibble() %>%
+    select(estimate, std.error, conf.low, conf.high, df)
+}
+
 # Table of estimators to apply to all generated scenarios
 estimators <- tribble(
   ~estimator_name, ~estimator_fn,
   "naive", estimator_naive,
   "standardisation", estimator_standardisation,
+  "regression", estimator_regression,
   "iptw", estimator_iptw_glm,
   "iv", estimator_ivreg,
 )

@@ -18,7 +18,7 @@ run_estimator_mi <- function(imp_all_df, estimator) {
                         n = rows, k = rows - first(imp_results$df))
   tibble(
     estimate = pooled$qbar,
-    std.error = sqrt(pooled$ubar),
+    std.error = sqrt(pooled$t),
     conf.low = estimate - qt(0.975, pooled$df)*std.error,
     conf.high = estimate + qt(0.975, pooled$df)*std.error,
     df = pooled$df
@@ -158,7 +158,6 @@ missingness_methods <- tribble(
   ~missingness_name, ~missingness_fn,
   "cc", missingness_cc,
   "mi_logreg", \(d, e) missingness_mi_binary(d, e, method = "logreg"),
-  "mi_logreg_boot", \(d, e) missingness_mi_binary(d, e, method = "logreg.boot"),
   "mi_pmm", \(d, e) missingness_mi_binary(d, e, method = "pmm"),
   "smcfcs", missingness_mi_smcfcs,
   "ipw", missingness_ipw,
