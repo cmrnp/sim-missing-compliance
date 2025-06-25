@@ -141,7 +141,7 @@ estimators <- tribble(
   ~estimator_name, ~estimator_fn,
   "naive", estimator_naive,
   "standardisation", estimator_standardisation,
-  "regression", estimator_regression,
+#  "regression", estimator_regression,
   "iptw", estimator_iptw_glm,
   "iv", estimator_ivreg,
 )

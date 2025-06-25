@@ -72,6 +72,7 @@ missingness_mi_binary <- function(dat, estimators, method, m = 50, iter = 1) {
 }
 
 # SMCFCS multiple imputation of binary compliance measure
+# Note that this is not well tested and not featured in the final paper.
 missingness_mi_smcfcs <- function(dat, estimators, method, m = 50, iter = 1) {
   dat_for_imp <- dat %>%
     select(trt, aux, confounder, dose_binary, outcome) %>%
@@ -159,6 +160,6 @@ missingness_methods <- tribble(
   "cc", missingness_cc,
   "mi_logreg", \(d, e) missingness_mi_binary(d, e, method = "logreg"),
   "mi_pmm", \(d, e) missingness_mi_binary(d, e, method = "pmm"),
-  "smcfcs", missingness_mi_smcfcs,
+#  "smcfcs", missingness_mi_smcfcs,
   "ipw", missingness_ipw,
 )
